@@ -33,6 +33,7 @@ interface JobCardProps {
   onOpenDetails: (job: Job) => void;
   onEditJob: (job: Job) => void;
   onActionComplete?: () => void;
+  onClaimSuccess?: (job: Job) => void;
 }
 
 export const JobCard: React.FC<JobCardProps> = ({
@@ -43,6 +44,7 @@ export const JobCard: React.FC<JobCardProps> = ({
   onOpenDetails,
   onEditJob,
   onActionComplete,
+  onClaimSuccess,
 }) => {
   const [actionLoading, setActionLoading] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -98,6 +100,7 @@ export const JobCard: React.FC<JobCardProps> = ({
       });
       triggerCelebrationConfetti();
       if (onActionComplete) onActionComplete();
+      if (onClaimSuccess) onClaimSuccess(job);
     } catch (err: any) {
       console.error('Claim error:', err);
       setClaimError(err.message || 'שגיאה ברישום לעבודה');
@@ -322,15 +325,24 @@ export const JobCard: React.FC<JobCardProps> = ({
                       <Phone className="w-3.5 h-3.5" />
                       <span>חייג: {job.creatorPhone}</span>
                     </a>
-                    <a
-                      href={`https://wa.me/${cleanPhoneForWa(job.creatorPhone)}?text=${encodeURIComponent(`שלום ${job.creatorName}, נרשמתי לעבודה "${job.title}" דרך שלוש - ארבע בקיבוץ`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl transition-colors"
-                      title="וואטסאפ למזמין"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onClaimSuccess) {
+                          onClaimSuccess(job);
+                        } else {
+                          window.open(
+                            `https://wa.me/${cleanPhoneForWa(job.creatorPhone)}?text=${encodeURIComponent(`שלום ${job.creatorName}, נרשמתי לעבודה "${job.title}" דרך שלוש - ארבע בקיבוץ`)}`,
+                            '_blank'
+                          );
+                        }
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                      title="שלח וואטסאפ עם הפרטים למזמין"
                     >
-                      <MessageCircle className="w-4 h-4" />
-                    </a>
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>וואטסאפ למפרסם</span>
+                    </button>
                   </div>
                 </div>
               )}

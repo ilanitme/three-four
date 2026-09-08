@@ -40,6 +40,7 @@ interface DashboardViewProps {
   onOpenGoogleSheetsFile?: () => void;
   onOpenWhatsAppBot?: () => void;
   onRefreshUser?: () => void;
+  onClaimSuccess?: (job: Job) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -55,6 +56,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenGoogleSheetsFile,
   onOpenWhatsAppBot,
   onRefreshUser,
+  onClaimSuccess,
 }) => {
   const isAdmin = isUserAdmin(user);
   const isJobSeeker = user.isLookingForJob === true && !isAdmin;
@@ -402,6 +404,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onOpenShare={onOpenShare}
                   onOpenDetails={onOpenDetails}
                   onEditJob={onEditJob}
+                  onClaimSuccess={onClaimSuccess}
                 />
               ))}
             </div>
@@ -451,6 +454,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onOpenShare={onOpenShare}
                   onOpenDetails={onOpenDetails}
                   onEditJob={onEditJob}
+                  onClaimSuccess={onClaimSuccess}
                 />
               ))}
             </div>

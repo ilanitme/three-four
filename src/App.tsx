@@ -19,6 +19,7 @@ import { AuthModal } from './components/AuthModal';
 import { PostJobModal } from './components/PostJobModal';
 import { WhatsAppShareModal } from './components/WhatsAppShareModal';
 import { JobDetailsModal } from './components/JobDetailsModal';
+import { ClaimSuccessWhatsAppModal } from './components/ClaimSuccessWhatsAppModal';
 import { CsvExportModal } from './components/CsvExportModal';
 import { WhatsAppBotSettingsModal } from './components/WhatsAppBotSettingsModal';
 import { downloadJobsCsvFile } from './lib/googleSheetsService';
@@ -61,6 +62,8 @@ export default function App() {
   const [shareJob, setShareJob] = useState<Job | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [claimWhatsAppModalOpen, setClaimWhatsAppModalOpen] = useState(false);
+  const [claimedJobForWhatsApp, setClaimedJobForWhatsApp] = useState<Job | null>(null);
   const [csvExportModalOpen, setCsvExportModalOpen] = useState(false);
   const [whatsAppBotModalOpen, setWhatsAppBotModalOpen] = useState(false);
 
@@ -297,6 +300,11 @@ export default function App() {
     setDetailsModalOpen(true);
   };
 
+  const handleClaimSuccess = (job: Job) => {
+    setClaimedJobForWhatsApp(job);
+    setClaimWhatsAppModalOpen(true);
+  };
+
   // Combine all jobs for sync (using all Firestore jobs collection if available, fallback to combined views)
   const allKnownJobs = allFirestoreJobs.length > 0 
     ? allFirestoreJobs 
@@ -343,6 +351,7 @@ export default function App() {
             onOpenShare={handleOpenShare}
             onOpenDetails={handleOpenDetails}
             onEditJob={handleEditJob}
+            onClaimSuccess={handleClaimSuccess}
           />
         )}
 
@@ -356,6 +365,7 @@ export default function App() {
             onOpenShare={handleOpenShare}
             onOpenDetails={handleOpenDetails}
             onEditJob={handleEditJob}
+            onClaimSuccess={handleClaimSuccess}
             onOpenGoogleSheets={() => setCsvExportModalOpen(true)}
             onOpenGoogleSheetsFile={() => setCsvExportModalOpen(true)}
             onOpenWhatsAppBot={() => setWhatsAppBotModalOpen(true)}
@@ -446,11 +456,20 @@ export default function App() {
         onOpenAuth={() => handleOpenAuth('register')}
         onOpenShare={handleOpenShare}
         onEditJob={handleEditJob}
+        onClaimSuccess={handleClaimSuccess}
         onJobUpdated={() => {
           if (selectedJob) {
             fetchJobById(selectedJob.id).then((j) => setSelectedJob(j));
           }
         }}
+      />
+
+      {/* Direct WhatsApp to Job Creator Notification Modal */}
+      <ClaimSuccessWhatsAppModal
+        isOpen={claimWhatsAppModalOpen}
+        onClose={() => setClaimWhatsAppModalOpen(false)}
+        job={claimedJobForWhatsApp}
+        worker={currentUser}
       />
 
       {/* CSV / Excel Export Modal (Offline, Secure, Instant) */}

@@ -32,6 +32,7 @@ interface AvailableJobsFeedProps {
   onOpenShare: (job: Job) => void;
   onOpenDetails: (job: Job) => void;
   onEditJob: (job: Job) => void;
+  onClaimSuccess?: (job: Job) => void;
 }
 
 export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
@@ -42,6 +43,7 @@ export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
   onOpenShare,
   onOpenDetails,
   onEditJob,
+  onClaimSuccess,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -446,6 +448,7 @@ export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
                 onOpenShare={onOpenShare}
                 onOpenDetails={onOpenDetails}
                 onEditJob={onEditJob}
+                onClaimSuccess={onClaimSuccess}
               />
             ))
           ) : (

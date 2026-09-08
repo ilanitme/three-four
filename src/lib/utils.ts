@@ -71,6 +71,88 @@ _(כל הקודם זוכה - נלקח ישירות באפליקציה)_`;
   return text;
 }
 
+// Format clean phone for WhatsApp link
+export function cleanPhoneForWhatsApp(phone: string): string {
+  let clean = phone.replace(/\D/g, '');
+  if (clean.startsWith('0')) {
+    clean = '972' + clean.slice(1);
+  }
+  return clean;
+}
+
+// Generate structured message when a worker claims a job to send directly to the creator via WhatsApp
+export function generateClaimWhatsAppMessage(
+  job: {
+    title: string;
+    location?: string;
+    payment: number | string;
+    details?: string;
+    creatorName?: string;
+  },
+  worker: {
+    fullName: string;
+    phoneNumber: string;
+    youthGroup?: string;
+  }
+): string {
+  const paymentFormatted = formatPayment(job.payment);
+  const creatorGreeting = job.creatorName ? `שלום ${job.creatorName} 👋` : `שלום 👋`;
+
+  const lines: string[] = [
+    creatorGreeting,
+    `לקחתי את העבודה שפרסמת בלוח העבודות "שלוש - ארבע"! 🌟`,
+    ``,
+    `📌 *פרטי העבודה:*`,
+    `• *עבודה:* ${job.title}`,
+  ];
+
+  if (job.location) {
+    lines.push(`• *מיקום:* ${job.location}`);
+  }
+  if (paymentFormatted) {
+    lines.push(`• *תשלום:* ${paymentFormatted}`);
+  }
+  if (job.details && job.details.trim()) {
+    const cleanDetails = job.details.trim();
+    lines.push(`• *פירוט:* ${cleanDetails}`);
+  }
+
+  lines.push(``);
+  lines.push(`👤 *פרטי הלוקח/ת:*`);
+  lines.push(`• *שם:* ${worker.fullName}`);
+  lines.push(`• *טלפון:* ${worker.phoneNumber}`);
+  if (worker.youthGroup) {
+    lines.push(`• *שכבה / קבוצה:* ${worker.youthGroup}`);
+  }
+
+  lines.push(``);
+  lines.push(`אשמח שנתאם את שעת ההגעה ופרטים נוספים. תודה רבה! 🙏`);
+
+  return lines.join('\n');
+}
+
+// Generate WhatsApp direct URL for claiming worker to contact creator
+export function getClaimWhatsAppUrl(
+  job: {
+    title: string;
+    creatorPhone?: string;
+    creatorName?: string;
+    location?: string;
+    payment: number | string;
+    details?: string;
+  },
+  worker: {
+    fullName: string;
+    phoneNumber: string;
+    youthGroup?: string;
+  },
+  customText?: string
+): string {
+  const cleanPhone = cleanPhoneForWhatsApp(job.creatorPhone || '');
+  const text = customText || generateClaimWhatsAppMessage(job, worker);
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+}
+
 // Generate WhatsApp direct URL
 export function getWhatsAppShareUrl(job: {
   id: string;

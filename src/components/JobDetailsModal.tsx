@@ -42,6 +42,7 @@ interface JobDetailsModalProps {
   onOpenShare: (job: Job) => void;
   onEditJob?: (job: Job) => void;
   onJobUpdated?: () => void;
+  onClaimSuccess?: (job: Job) => void;
 }
 
 export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
@@ -53,6 +54,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   onOpenShare,
   onEditJob,
   onJobUpdated,
+  onClaimSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -126,6 +128,7 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
       triggerCelebrationConfetti();
       if (onJobUpdated) onJobUpdated();
       onClose();
+      if (onClaimSuccess) onClaimSuccess(job);
     } catch (err: any) {
       console.error('Claim error in modal:', err);
       setClaimError(err.message || 'שגיאה ברישום לעבודה');
@@ -353,14 +356,25 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                       <Phone className="w-3.5 h-3.5" />
                       <span>חייג</span>
                     </a>
-                    <a
-                      href={`https://wa.me/${cleanPhoneForWa(job.creatorPhone)}?text=${encodeURIComponent(`שלום ${job.creatorName}, אני פונה לגבי העבודה "${job.title}"`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl transition-colors shadow-2xs"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isRegistered && !isCreator && onClaimSuccess) {
+                          onClose();
+                          onClaimSuccess(job);
+                        } else {
+                          window.open(
+                            `https://wa.me/${cleanPhoneForWa(job.creatorPhone)}?text=${encodeURIComponent(`שלום ${job.creatorName}, אני פונה לגבי העבודה "${job.title}"`)}`,
+                            '_blank'
+                          );
+                        }
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+                      title={isRegistered && !isCreator ? "שלח הודעת וואטסאפ עם הפרטים למפרסם" : "וואטסאפ"}
                     >
-                      <MessageCircle className="w-4 h-4" />
-                    </a>
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>וואטסאפ</span>
+                    </button>
                   </div>
                 </div>
               ) : (
