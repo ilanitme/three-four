@@ -88,17 +88,17 @@ export const ThreeFourLogo: React.FC<ThreeFourLogoProps> = ({
 
       {/* Brand Text */}
       {showText && (
-        <div className="text-right">
-          <div className="flex items-center gap-2">
-            <span className={`${cfg.title} text-slate-900 tracking-tight heading-font font-['Rubik',sans-serif]`}>
+        <div className="text-right min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className={`${cfg.title} text-slate-900 tracking-tight heading-font font-['Rubik',sans-serif] whitespace-nowrap`}>
               שלוש - ארבע
             </span>
-            <span className={`inline-flex items-center font-bold bg-gradient-to-r from-emerald-50 to-teal-50 text-teal-800 rounded-full border border-teal-200/90 shadow-2xs ${cfg.badge}`}>
+            <span className={`hidden sm:inline-flex items-center font-bold bg-gradient-to-r from-emerald-50 to-teal-50 text-teal-800 rounded-full border border-teal-200/90 shadow-2xs ${cfg.badge} whitespace-nowrap`}>
               קיבוץ 🌿
             </span>
           </div>
           {tagline && (
-            <p className={`${cfg.tagline} text-slate-500 font-medium -mt-0.5`}>
+            <p className={`${cfg.tagline} text-slate-500 font-medium -mt-0.5 hidden sm:block truncate`}>
               {tagline}
             </p>
           )}

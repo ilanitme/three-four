@@ -24,6 +24,11 @@
   border-color: #f1f5f9;
 }
 
+/* Safe area utility */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

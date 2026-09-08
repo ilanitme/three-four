@@ -244,28 +244,34 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto overscroll-contain"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div 
-        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200 text-right font-['Assistant',sans-serif]"
+        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto max-h-[92vh] sm:max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200 text-right font-['Assistant',sans-serif]"
         dir="rtl"
       >
         {/* Close Button */}
         <button
           id="btn-close-post-job-modal"
           onClick={onClose}
-          className="absolute top-4 left-4 p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-colors z-10"
+          aria-label="סגור חלון"
+          className="absolute top-3 sm:top-4 left-3 sm:left-4 p-2 text-white/90 hover:text-white bg-black/20 hover:bg-black/30 rounded-full transition-colors z-20 backdrop-blur-xs"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Top Header */}
-        <div className="bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-600 p-6 sm:p-7 text-white relative overflow-hidden">
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white text-2xl font-bold shadow-2xs">
+        {/* Top Header - Fixed at top of modal */}
+        <div className="bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-600 p-4 sm:p-6 text-white relative shrink-0">
+          <div className="flex items-center gap-3 relative z-10 pl-10">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-2xs shrink-0">
               🏡
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black font-['Rubik',sans-serif] drop-shadow-xs">
+              <h2 className="text-lg sm:text-2xl font-black font-['Rubik',sans-serif] drop-shadow-xs leading-tight">
                 {editingJob ? 'עריכת מודעת עבודה בקיבוץ' : 'פרסום בקשת עבודה בקיבוץ ✨'}
               </h2>
               <p className="text-cyan-100 text-xs sm:text-sm mt-0.5 font-medium">
@@ -276,8 +282,8 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
           <div className="absolute -left-6 -bottom-6 w-28 h-28 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        {/* Form - Scrollable container */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto overscroll-contain flex-1">
           {error && (
             <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
