@@ -19,9 +19,9 @@ import { AuthModal } from './components/AuthModal';
 import { PostJobModal } from './components/PostJobModal';
 import { WhatsAppShareModal } from './components/WhatsAppShareModal';
 import { JobDetailsModal } from './components/JobDetailsModal';
-import { GoogleSheetsModal } from './components/GoogleSheetsModal';
+import { CsvExportModal } from './components/CsvExportModal';
 import { WhatsAppBotSettingsModal } from './components/WhatsAppBotSettingsModal';
-import { initGoogleSheetsAuth, autoBackgroundSyncJobs, openGoogleSpreadsheetDirectly } from './lib/googleSheetsService';
+import { downloadJobsCsvFile } from './lib/googleSheetsService';
 import { sendGreenApiJobNotification } from './lib/greenApiService';
 import { Sparkles, MessageCircle, Heart, Phone, PhoneCall } from 'lucide-react';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
@@ -61,26 +61,8 @@ export default function App() {
   const [shareJob, setShareJob] = useState<Job | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
+  const [csvExportModalOpen, setCsvExportModalOpen] = useState(false);
   const [whatsAppBotModalOpen, setWhatsAppBotModalOpen] = useState(false);
-
-  // Background auto-sync debounce tracker
-  const syncTimeoutRef = useRef<any>(null);
-
-  // 0. Initialize Google Sheets Auth listener
-  useEffect(() => {
-    const unsub = initGoogleSheetsAuth(
-      (user, token) => {
-        console.log('[Google Sheets] Connected session with Google:', user.email);
-      },
-      () => {
-        // Not connected or expired
-      }
-    );
-    return () => {
-      if (unsub) unsub();
-    };
-  }, []);
 
   // 1. Listen to Firebase Auth state
   useEffect(() => {
@@ -324,20 +306,6 @@ export default function App() {
         ...claimedJobs.filter(cj => !availableJobs.some(aj => aj.id === cj.id) && !postedJobs.some(pj => pj.id === cj.id))
       ];
 
-  // Auto background sync to Google Sheets on any job creation or registration/status change
-  useEffect(() => {
-    if (allKnownJobs.length > 0) {
-      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-      // Quick debounced sync (1.5 seconds) to ensure real-time backup without spamming
-      syncTimeoutRef.current = setTimeout(() => {
-        autoBackgroundSyncJobs(allKnownJobs);
-      }, 1500);
-    }
-    return () => {
-      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    };
-  }, [allFirestoreJobs, availableJobs.length, postedJobs.length, claimedJobs.length]);
-
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-teal-50/20 to-sky-50/30 text-slate-800 font-sans" dir="rtl">
       
@@ -359,8 +327,8 @@ export default function App() {
         onLogout={handleLogout}
         availableCount={availableJobs.length}
         myJobsCount={postedJobs.length + claimedJobs.length}
-        onOpenGoogleSheets={() => setSheetsModalOpen(true)}
-        onOpenGoogleSheetsFile={() => openGoogleSpreadsheetDirectly(allKnownJobs)}
+        onOpenGoogleSheets={() => setCsvExportModalOpen(true)}
+        onOpenGoogleSheetsFile={() => downloadJobsCsvFile(allKnownJobs)}
         onOpenWhatsAppBot={() => setWhatsAppBotModalOpen(true)}
       />
 
@@ -388,8 +356,8 @@ export default function App() {
             onOpenShare={handleOpenShare}
             onOpenDetails={handleOpenDetails}
             onEditJob={handleEditJob}
-            onOpenGoogleSheets={() => setSheetsModalOpen(true)}
-            onOpenGoogleSheetsFile={() => setSheetsModalOpen(true)}
+            onOpenGoogleSheets={() => setCsvExportModalOpen(true)}
+            onOpenGoogleSheetsFile={() => setCsvExportModalOpen(true)}
             onOpenWhatsAppBot={() => setWhatsAppBotModalOpen(true)}
             onRefreshUser={() => {
               if (currentUser?.uid) {
@@ -434,10 +402,10 @@ export default function App() {
             </button>
             <span>•</span>
             <button
-              onClick={() => setSheetsModalOpen(true)}
+              onClick={() => setCsvExportModalOpen(true)}
               className="text-teal-700 hover:text-teal-800 font-bold hover:underline cursor-pointer"
             >
-              גיבוי Google Sheets 📊
+              הורדת יומן עבודות (CSV / Excel) 📊
             </button>
           </div>
         </div>
@@ -485,10 +453,10 @@ export default function App() {
         }}
       />
 
-      {/* Google Sheets Backup & Monitor Modal */}
-      <GoogleSheetsModal
-        isOpen={sheetsModalOpen}
-        onClose={() => setSheetsModalOpen(false)}
+      {/* CSV / Excel Export Modal (Offline, Secure, Instant) */}
+      <CsvExportModal
+        isOpen={csvExportModalOpen}
+        onClose={() => setCsvExportModalOpen(false)}
         allJobs={allKnownJobs}
       />
 

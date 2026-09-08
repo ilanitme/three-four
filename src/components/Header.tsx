@@ -13,10 +13,7 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   MessageSquare,
-  ShieldAlert,
-  ExternalLink,
-  Settings,
-  Smartphone
+  ShieldAlert
 } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -106,30 +103,17 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* Google Sheets Live Backup & Monitor Button (ADMIN ONLY) */}
+            {/* CSV / Excel Jobs Export Button (ADMIN ONLY) */}
             {isAdmin && (
-              <div className="flex items-center bg-teal-50/90 border border-teal-200 rounded-xl overflow-hidden shadow-2xs">
-                <button
-                  id="nav-btn-sheets"
-                  onClick={onOpenGoogleSheets || onOpenGoogleSheetsFile}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-teal-900 hover:bg-teal-100 transition-colors"
-                  title="יומן Google Sheets והורדת נתונים (מנהל מערכת)"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-teal-600" />
-                  <span>Google Sheet</span>
-                  <ExternalLink className="w-3 h-3 text-teal-500" />
-                </button>
-                {onOpenGoogleSheets && (
-                  <button
-                    id="nav-btn-sheets-settings"
-                    onClick={onOpenGoogleSheets}
-                    className="p-2 text-teal-700 hover:bg-teal-100 border-r border-teal-200 transition-colors"
-                    title="הגדרות, קישור והורדת קובץ Google Sheets"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+              <button
+                id="nav-btn-sheets"
+                onClick={onOpenGoogleSheets || onOpenGoogleSheetsFile}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-teal-900 bg-teal-50/90 hover:bg-teal-100 border border-teal-200 rounded-xl shadow-2xs transition-colors"
+                title="הורדת יומן עבודות לקובץ CSV / Excel"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-teal-600" />
+                <span>הורד CSV</span>
+              </button>
             )}
 
             {/* WhatsApp Group Bot Automation Button (ADMIN ONLY) */}
@@ -162,16 +146,15 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Quick Sheets Direct Link Button for Tablet/Mobile (ADMIN ONLY) */}
+            {/* Quick CSV Direct Download Button for Tablet/Mobile (ADMIN ONLY) */}
             {isAdmin && (
               <button
                 id="btn-quick-google-sheets"
                 onClick={onOpenGoogleSheets || onOpenGoogleSheetsFile}
                 className="md:hidden p-2 rounded-xl text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors flex items-center gap-1 shrink-0"
-                title="יומן וקובץ Google Sheet (מנהל)"
+                title="הורדת יומן עבודות (קובץ CSV)"
               >
                 <FileSpreadsheet className="w-4 h-4 text-teal-600" />
-                <ExternalLink className="w-2.5 h-2.5 text-teal-500" />
               </button>
             )}
 

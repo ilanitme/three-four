@@ -16,20 +16,16 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   MessageSquare,
-  ExternalLink,
-  Settings,
   ArrowRightLeft,
   Users,
   Download,
-  Copy,
-  Check,
-  Link as LinkIcon
+  Check
 } from 'lucide-react';
 import { Job, UserProfile, DashboardSubTab, FeedbackReview } from '../types';
 import { JobCard } from './JobCard';
 import { fetchUserReviews, isUserAdmin, updateUserProfile } from '../lib/firebase';
 import { formatHebrewDate } from '../lib/utils';
-import { downloadJobsCsvFile, getSavedSpreadsheetInfo } from '../lib/googleSheetsService';
+import { downloadJobsCsvFile } from '../lib/googleSheetsService';
 
 interface DashboardViewProps {
   user: UserProfile;
@@ -70,43 +66,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [sheetUrl, setSheetUrl] = useState<string | null>(null);
-  const [copiedUrl, setCopiedUrl] = useState(false);
-
-  useEffect(() => {
-    if (isAdmin) {
-      getSavedSpreadsheetInfo().then((info) => {
-        if (info.spreadsheetUrl) {
-          setSheetUrl(info.spreadsheetUrl);
-        } else if (info.spreadsheetId) {
-          setSheetUrl(`https://docs.google.com/spreadsheets/d/${info.spreadsheetId}/edit`);
-        }
-      });
-    }
-  }, [isAdmin]);
 
   const handleDownloadAllJobsCsv = () => {
     try {
-      const jobsToExport = allJobs.length > 0 ? allJobs : [...postedJobs, ...claimedJobs];
+      const jobsToExport = allJobs && allJobs.length > 0 ? allJobs : [...postedJobs, ...claimedJobs];
       const timestamp = new Date().toISOString().slice(0, 10);
       downloadJobsCsvFile(jobsToExport, `יומן_עבודות_שלוש_ארבע_${timestamp}.csv`);
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (err) {
       console.error('Download error:', err);
-    }
-  };
-
-  const handleCopySheetUrl = async () => {
-    if (!sheetUrl) return;
-    try {
-      await navigator.clipboard.writeText(sheetUrl);
-      setCopiedUrl(true);
-      setTimeout(() => setCopiedUrl(false), 2500);
-    } catch {
-      window.prompt('העתק כתובת Google Sheet:', sheetUrl);
-      setCopiedUrl(true);
-      setTimeout(() => setCopiedUrl(false), 2500);
     }
   };
 
@@ -228,30 +197,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             )}
 
-            {/* Google Sheets Live Backup - ONLY FOR ADMIN */}
+            {/* CSV Export - ONLY FOR ADMIN */}
             {isAdmin && (
-              <div className="flex items-center bg-teal-50 border border-teal-200 rounded-2xl overflow-hidden shadow-xs">
-                <button
-                  id="btn-dashboard-google-sheets"
-                  onClick={onOpenGoogleSheets}
-                  className="px-3.5 py-3 hover:bg-teal-100 text-teal-950 text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2"
-                  title="יומן וקישור Google Sheet (מנהל מערכת)"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-teal-600" />
-                  <span>Google Sheet</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-teal-600" />
-                </button>
-                {onOpenGoogleSheets && (
-                  <button
-                    id="btn-dashboard-google-sheets-settings"
-                    onClick={onOpenGoogleSheets}
-                    className="p-3 text-teal-700 hover:bg-teal-100 border-r border-teal-200 transition-colors"
-                    title="הגדרות וקישור Google Sheets"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+              <button
+                id="btn-dashboard-google-sheets"
+                onClick={handleDownloadAllJobsCsv}
+                className="px-3.5 py-3 rounded-2xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-950 text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                title="הורדת יומן עבודות לקובץ CSV / Excel"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-teal-600" />
+                <span>הורד יומן עבודות (CSV)</span>
+                <Download className="w-3.5 h-3.5 text-teal-600" />
+              </button>
             )}
 
             {/* Quick 1-Click CSV Download - ONLY FOR ADMIN */}
@@ -322,7 +279,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Admin Google Sheets & Data Export Management Bar */}
+      {/* Admin Data Export Management Bar */}
       {isAdmin && (
         <div className="bg-gradient-to-l from-teal-900 via-teal-800 to-cyan-900 text-white rounded-3xl p-5 shadow-lg space-y-3 font-['Assistant',sans-serif]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -332,13 +289,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
               <div>
                 <h3 className="font-['Rubik',sans-serif] font-bold text-sm sm:text-base text-white flex items-center gap-2">
-                  <span>יומן עבודות וגיבוי Google Sheets</span>
+                  <span>יומן עבודות וייצוא נתונים (CSV / Excel)</span>
                   <span className="text-[10px] bg-emerald-500/30 text-emerald-200 px-2 py-0.5 rounded-full font-sans">
                     ניהול מנהל
                   </span>
                 </h3>
                 <p className="text-xs text-teal-100/90">
-                  קבלת קישור ישיר, הורדה מהירה ב-CSV/Excel וסנכרון מלא
+                  הורדה מהירה בלחיצה אחת של כל {allJobs.length} העבודות במאגר, ללא צורך בהרשאות או חיבורי ענן
                 </p>
               </div>
             </div>
@@ -347,86 +304,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 id="btn-admin-bar-download-csv"
                 onClick={handleDownloadAllJobsCsv}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
               >
                 {downloadSuccess ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-300" />
+                    <Check className="w-4 h-4 text-emerald-200" />
                     <span>קובץ CSV הורד בהצלחה!</span>
                   </>
                 ) : (
                   <>
-                    <Download className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>הורד קובץ גיליון (CSV)</span>
+                    <Download className="w-4 h-4" />
+                    <span>הורד קובץ יומן עבודות (CSV)</span>
                   </>
                 )}
               </button>
-
-              {onOpenGoogleSheets && (
-                <button
-                  id="btn-admin-bar-open-sheets-modal"
-                  onClick={onOpenGoogleSheets}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  <span>ניהול וסנכרון</span>
-                </button>
-              )}
             </div>
           </div>
-
-          {/* Direct URL Bar */}
-          {sheetUrl ? (
-            <div className="flex items-center gap-2 bg-black/25 backdrop-blur-xs rounded-2xl p-2 border border-white/10">
-              <LinkIcon className="w-4 h-4 text-teal-300 shrink-0 mr-1" />
-              <input
-                type="text"
-                readOnly
-                value={sheetUrl}
-                className="flex-1 bg-transparent text-xs text-teal-50 font-mono outline-hidden select-all text-left"
-                dir="ltr"
-              />
-              <button
-                id="btn-admin-bar-copy-url"
-                onClick={handleCopySheetUrl}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors shrink-0 cursor-pointer"
-              >
-                {copiedUrl ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>הועתק!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-teal-200" />
-                    <span>העתק קישור</span>
-                  </>
-                )}
-              </button>
-              <a
-                id="btn-admin-bar-open-url"
-                href={sheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-teal-950 text-xs font-extrabold transition-colors shrink-0"
-              >
-                <span>פתח גיליון</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between text-xs text-teal-100 bg-black/20 rounded-2xl p-3 border border-white/10">
-              <span>עדיין לא הוגדר קישור ל-Google Sheet</span>
-              {onOpenGoogleSheets && (
-                <button
-                  onClick={onOpenGoogleSheets}
-                  className="text-xs font-bold text-emerald-300 hover:underline cursor-pointer"
-                >
-                  הגדר קישור או סנכרן כעת
-                </button>
-              )}
-            </div>
-          )}
         </div>
       )}
 
