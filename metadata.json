@@ -1,0 +1,6 @@
+{
+  "name": "שלוש - ארבע",
+  "description": "שלוש - ארבע: לוח עבודות מיידי ועזרה הדדית בקיבוץ ובקהילה",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

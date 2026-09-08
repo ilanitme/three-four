@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Assistant', 'Heebo', system-ui, -apple-system, sans-serif;
+  }
+}
+
+.heading-font {
+  font-family: 'Rubik', 'Heebo', 'Assistant', sans-serif;
+}
+
+/* Youthful energetic community gradient styles */
+.youth-gradient {
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 50%, #10b981 100%);
+}
+
+.youth-gradient-warm {
+  background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 50%, #f59e0b 100%);
+}
+
+.youth-card {
+  background: #ffffff;
+  border-color: #f1f5f9;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(14, 165, 233, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.5);
+}

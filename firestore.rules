@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Jobs Collection
+    match /jobs/{jobId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // Reviews Collection
+    match /reviews/{reviewId} {
+      allow read, create, update: if true;
+      allow delete: if true;
+    }
+
+    // App Settings (e.g. Google Sheets integration config)
+    match /app_settings/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
+
+

@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with phone number, verification state, job seeker or poster mode, admin status, and aggregate rating",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "phoneNumber": { "type": "string", "maxLength": 20 },
+        "isPhoneVerified": { "type": "boolean" },
+        "isLookingForJob": { "type": "boolean" },
+        "youthGroup": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "isAdmin": { "type": "boolean" },
+        "ratingAverage": { "type": "number" },
+        "ratingCount": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "fullName", "phoneNumber"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "On-demand community micro-job posting with multiple worker registrations",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "details": { "type": "string", "maxLength": 2000 },
+        "location": { "type": "string", "maxLength": 200 },
+        "payment": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["new", "in_progress", "completed", "cancelled"] },
+        "workersNeeded": { "type": "number" },
+        "registeredWorkers": { "type": "array" },
+        "registeredWorkerIds": { "type": "array" },
+        "creatorId": { "type": "string", "maxLength": 128 },
+        "creatorName": { "type": "string", "maxLength": 100 },
+        "creatorPhone": { "type": "string", "maxLength": 20 },
+        "workerId": { "type": "string", "maxLength": 128 },
+        "workerName": { "type": "string", "maxLength": 100 },
+        "workerPhone": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "location", "payment", "status", "creatorId", "creatorName", "creatorPhone"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Feedback and star rating left after a job is completed",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string", "maxLength": 128 },
+        "jobTitle": { "type": "string", "maxLength": 200 },
+        "fromUserId": { "type": "string", "maxLength": 128 },
+        "fromUserName": { "type": "string", "maxLength": 100 },
+        "toUserId": { "type": "string", "maxLength": 128 },
+        "toUserName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["creator", "worker"] },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["jobId", "fromUserId", "toUserId", "rating"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and verification info"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Community jobs collection"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Feedback and ratings between job creators and workers"
+    }
+  }
+}
