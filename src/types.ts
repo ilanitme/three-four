@@ -28,7 +28,6 @@ export interface UserProfile {
   youthGroup?: YouthGroup | string;
   role?: 'admin' | 'user';
   isAdmin?: boolean;
-  IsAdmin?: boolean;
   ratingAverage?: number;
   ratingCount?: number;
   createdAt: any;

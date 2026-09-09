@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Smartphone, X, Download, Apple, Sparkles } from 'lucide-react';
-import { usePWAInstall } from '../hooks/usePWAInstall';
+import { usePWAInstall, checkIsStandaloneApp } from '../hooks/usePWAInstall';
 import { PWAInstallModal } from './PWAInstallModal';
 
 export const PWAInstallBanner: React.FC = () => {
@@ -9,14 +9,23 @@ export const PWAInstallBanner: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    // Only show if not standalone and not dismissed this session
-    const isDismissed = sessionStorage.getItem('three_four_pwa_banner_dismissed');
-    if (!isDismissed && !isInstalled) {
+    // If we are already running in the standalone application or installed mode, NEVER show banner
+    if (isInstalled || checkIsStandaloneApp()) {
+      setDismissed(true);
+      return;
+    }
+
+    // Check if dismissed previously in localStorage or sessionStorage
+    const isDismissed = 
+      localStorage.getItem('three_four_pwa_banner_dismissed') === 'true' ||
+      sessionStorage.getItem('three_four_pwa_banner_dismissed') === 'true';
+
+    if (!isDismissed) {
       setDismissed(false);
     }
   }, [isInstalled]);
 
-  if (isInstalled || dismissed) {
+  if (isInstalled || checkIsStandaloneApp() || dismissed) {
     return (
       <PWAInstallModal 
         isOpen={modalOpen} 
@@ -26,6 +35,7 @@ export const PWAInstallBanner: React.FC = () => {
   }
 
   const handleDismiss = () => {
+    localStorage.setItem('three_four_pwa_banner_dismissed', 'true');
     sessionStorage.setItem('three_four_pwa_banner_dismissed', 'true');
     setDismissed(true);
   };
@@ -33,7 +43,11 @@ export const PWAInstallBanner: React.FC = () => {
   const handleInstallClick = async () => {
     if (isInstallable) {
       const installed = await install();
-      if (!installed) {
+      if (installed) {
+        localStorage.setItem('three_four_is_standalone_app', 'true');
+        localStorage.setItem('three_four_pwa_banner_dismissed', 'true');
+        setDismissed(true);
+      } else {
         setModalOpen(true);
       }
     } else {

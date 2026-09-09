@@ -21,10 +21,14 @@ export default defineConfig(() => {
           background_color: '#F0F7FA',
           display: 'standalone',
           orientation: 'portrait-primary',
-          start_url: '/',
+          start_url: '/?source=pwa',
           scope: '/',
           lang: 'he',
           dir: 'rtl',
+          launch_handler: {
+            client_mode: ['navigate-existing', 'auto'],
+          },
+          handle_links: 'preferred',
           icons: [
             {
               src: '/pwa-192x192.png',

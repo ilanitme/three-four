@@ -5,19 +5,39 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
+export function checkIsStandaloneApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  const isStandaloneMedia =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches;
+
+  const isIOSStandalone = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+  const isAndroidAppReferrer = document.referrer.includes('android-app://');
+  const isUrlPwa = window.location.search.includes('source=pwa') || window.location.search.includes('mode=pwa');
+  const isLocalStoragePwa = localStorage.getItem('three_four_is_standalone_app') === 'true';
+
+  const standalone = isStandaloneMedia || isIOSStandalone || isAndroidAppReferrer || isUrlPwa || isLocalStoragePwa;
+
+  if (standalone) {
+    try {
+      localStorage.setItem('three_four_is_standalone_app', 'true');
+    } catch {}
+  }
+
+  return standalone;
+}
+
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState<boolean>(() => checkIsStandaloneApp());
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
     // Detect standalone mode (already installed & running as standalone PWA)
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
-      document.referrer.includes('android-app://');
-
+    const isStandalone = checkIsStandaloneApp();
     setIsInstalled(isStandalone);
 
     // Detect iOS devices (iPhone, iPad, iPod)

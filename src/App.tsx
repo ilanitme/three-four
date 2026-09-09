@@ -9,7 +9,9 @@ import {
   subscribeUserClaimedJobs, 
   subscribeAllJobs,
   fetchJobById,
-  createJob
+  createJob,
+  getPersistentUserCookie,
+  isUserAdmin,
 } from './lib/firebase';
 import { Job, UserProfile, AppTab } from './types';
 import { Header } from './components/Header';
@@ -26,6 +28,7 @@ import { downloadJobsCsvFile } from './lib/googleSheetsService';
 import { sendGreenApiJobNotification } from './lib/greenApiService';
 import { Sparkles, MessageCircle, Heart, Phone, PhoneCall } from 'lucide-react';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { AppBridgeBanner } from './components/AppBridgeBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 export default function App() {
@@ -39,6 +42,7 @@ export default function App() {
   });
   const [authLoading, setAuthLoading] = useState(false);
   const [currentTab, setCurrentTab] = useState<AppTab>('feed');
+  const isAdmin = isUserAdmin(currentUser);
 
   // Jobs Lists (initialized with local cache to avoid flicker on refresh)
   const [availableJobs, setAvailableJobs] = useState<Job[]>(() => {
@@ -67,57 +71,44 @@ export default function App() {
   const [csvExportModalOpen, setCsvExportModalOpen] = useState(false);
   const [whatsAppBotModalOpen, setWhatsAppBotModalOpen] = useState(false);
 
-  // 1. Listen to Firebase Auth state
+  // 1. Listen to Firebase Auth state with cookie & localStorage persistence
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      let profile: UserProfile | null = null;
+
       if (user) {
-        let profile = await fetchUserProfile(user.uid);
-        if (!profile) {
-          const localStored = localStorage.getItem('quickjobs_active_user');
-          if (localStored) {
-            try {
-              const parsed = JSON.parse(localStored);
-              if (parsed.uid) {
-                profile = await fetchUserProfile(parsed.uid);
-              }
-              if (!profile) profile = parsed;
-            } catch {}
-          }
-        }
-        if (profile) {
-          setCurrentUser(profile);
-          try {
-            localStorage.setItem('quickjobs_active_user', JSON.stringify(profile));
-          } catch {}
-        } else {
-          setCurrentUser({
-            uid: user.uid,
-            fullName: user.displayName || 'משתמש',
-            phoneNumber: user.phoneNumber || '050-0000000',
-            createdAt: new Date().toISOString(),
-          });
-        }
-      } else {
+        profile = await fetchUserProfile(user.uid);
+      }
+
+      if (!profile) {
         const localStored = localStorage.getItem('quickjobs_active_user');
         if (localStored) {
           try {
             const parsed = JSON.parse(localStored);
-            setCurrentUser(parsed);
-            // Re-fetch from firestore to verify current IsAdmin status
             if (parsed.uid) {
-              fetchUserProfile(parsed.uid).then(fresh => {
-                if (fresh) {
-                  setCurrentUser(fresh);
-                  localStorage.setItem('quickjobs_active_user', JSON.stringify(fresh));
-                }
-              }).catch(() => {});
+              profile = await fetchUserProfile(parsed.uid);
             }
-          } catch (e) {
-            setCurrentUser(null);
-          }
-        } else {
-          setCurrentUser(null);
+            if (!profile) profile = parsed;
+          } catch {}
         }
+      }
+
+      if (!profile) {
+        const cookieUser = getPersistentUserCookie();
+        if (cookieUser?.uid) {
+          profile = await fetchUserProfile(cookieUser.uid);
+        } else if (cookieUser?.phone) {
+          profile = await fetchUserProfile(`usr_${cookieUser.phone}`);
+        }
+      }
+
+      if (profile) {
+        setCurrentUser(profile);
+        try {
+          localStorage.setItem('quickjobs_active_user', JSON.stringify(profile));
+        } catch {}
+      } else {
+        setCurrentUser(null);
       }
       setAuthLoading(false);
     });
@@ -317,6 +308,12 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 via-teal-50/20 to-sky-50/30 text-slate-800 font-sans" dir="rtl">
       
+      {/* App Bridge Banner (WhatsApp in-app browser escape & Open in App helper) */}
+      <AppBridgeBanner 
+        currentUser={currentUser} 
+        onOpenAuth={handleOpenAuth} 
+      />
+
       {/* PWA Mobile Install Banner (iPhone & Android) */}
       <PWAInstallBanner />
 
@@ -403,21 +400,23 @@ export default function App() {
             </a>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setWhatsAppBotModalOpen(true)}
-              className="text-emerald-700 hover:text-emerald-800 font-bold hover:underline cursor-pointer"
-            >
-              בוט וואטסאפ (Green API) 🤖
-            </button>
-            <span>•</span>
-            <button
-              onClick={() => setCsvExportModalOpen(true)}
-              className="text-teal-700 hover:text-teal-800 font-bold hover:underline cursor-pointer"
-            >
-              הורדת יומן עבודות (CSV / Excel) 📊
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setWhatsAppBotModalOpen(true)}
+                className="text-emerald-700 hover:text-emerald-800 font-bold hover:underline cursor-pointer"
+              >
+                בוט וואטסאפ (Green API) 🤖
+              </button>
+              <span>•</span>
+              <button
+                onClick={() => setCsvExportModalOpen(true)}
+                className="text-teal-700 hover:text-teal-800 font-bold hover:underline cursor-pointer"
+              >
+                הורדת יומן עבודות (CSV / Excel) 📊
+              </button>
+            </div>
+          )}
         </div>
       </footer>
 
@@ -453,7 +452,7 @@ export default function App() {
         onClose={() => setDetailsModalOpen(false)}
         job={selectedJob}
         currentUser={currentUser}
-        onOpenAuth={() => handleOpenAuth('register')}
+        onOpenAuth={(mode) => handleOpenAuth(mode || 'login')}
         onOpenShare={handleOpenShare}
         onEditJob={handleEditJob}
         onClaimSuccess={handleClaimSuccess}
@@ -472,18 +471,22 @@ export default function App() {
         worker={currentUser}
       />
 
-      {/* CSV / Excel Export Modal (Offline, Secure, Instant) */}
-      <CsvExportModal
-        isOpen={csvExportModalOpen}
-        onClose={() => setCsvExportModalOpen(false)}
-        allJobs={allKnownJobs}
-      />
+      {/* CSV / Excel Export Modal (ADMIN ONLY) */}
+      {isAdmin && (
+        <CsvExportModal
+          isOpen={csvExportModalOpen}
+          onClose={() => setCsvExportModalOpen(false)}
+          allJobs={allKnownJobs}
+        />
+      )}
 
-      {/* WhatsApp Bot (Green API) Automation Modal */}
-      <WhatsAppBotSettingsModal
-        isOpen={whatsAppBotModalOpen}
-        onClose={() => setWhatsAppBotModalOpen(false)}
-      />
+      {/* WhatsApp Bot (Green API) Automation Modal (ADMIN ONLY) */}
+      {isAdmin && (
+        <WhatsAppBotSettingsModal
+          isOpen={whatsAppBotModalOpen}
+          onClose={() => setWhatsAppBotModalOpen(false)}
+        />
+      )}
 
       {/* Offline Status Indicator */}
       <OfflineIndicator />

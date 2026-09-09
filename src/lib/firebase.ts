@@ -129,6 +129,41 @@ export function isUserAdmin(user: UserProfile | any | null | undefined): boolean
   return user.isAdmin === true || user.IsAdmin === true || user.role === 'admin';
 }
 
+// Persistent cookie helpers for cross-session and link visits (e.g. from WhatsApp links)
+export function setPersistentUserCookie(uid: string, phone: string) {
+  try {
+    if (typeof document !== 'undefined') {
+      const cleanPhone = cleanPhoneDigits(phone);
+      document.cookie = `three_four_uid=${encodeURIComponent(uid)}; path=/; max-age=31536000; SameSite=Lax`;
+      document.cookie = `three_four_phone=${encodeURIComponent(cleanPhone)}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+  } catch {}
+}
+
+export function getPersistentUserCookie(): { uid?: string; phone?: string } | null {
+  try {
+    if (typeof document === 'undefined') return null;
+    const cookies = document.cookie.split(';').reduce((acc, c) => {
+      const [k, v] = c.trim().split('=');
+      if (k && v) acc[k] = decodeURIComponent(v);
+      return acc;
+    }, {} as Record<string, string>);
+    if (cookies.three_four_uid || cookies.three_four_phone) {
+      return { uid: cookies.three_four_uid, phone: cookies.three_four_phone };
+    }
+  } catch {}
+  return null;
+}
+
+export function clearPersistentUserCookie() {
+  try {
+    if (typeof document !== 'undefined') {
+      document.cookie = `three_four_uid=; path=/; max-age=0; SameSite=Lax`;
+      document.cookie = `three_four_phone=; path=/; max-age=0; SameSite=Lax`;
+    }
+  } catch {}
+}
+
 // User Registration with Phone verification (Unique doc per clean phone)
 export async function registerUser(
   fullName: string, 
@@ -177,7 +212,6 @@ export async function registerUser(
     youthGroup: (extraData?.isLookingForJob && extraData?.youthGroup) ? extraData.youthGroup : undefined,
     role: 'user',
     isAdmin: false,
-    IsAdmin: false,
     ratingAverage: 5.0,
     ratingCount: 0,
     createdAt: new Date().toISOString(),
@@ -194,7 +228,6 @@ export async function registerUser(
     youthGroup: (extraData?.isLookingForJob && extraData?.youthGroup) ? extraData.youthGroup : '',
     role: 'user',
     isAdmin: false,
-    IsAdmin: false,
     ratingAverage: 5.0,
     ratingCount: 0,
     password: password || '',
@@ -230,10 +263,11 @@ export async function registerUser(
     await createUserWithEmailAndPassword(auth, syntheticEmail, password).catch(() => {});
   } catch {}
 
-  // 3. Save to local storage for persistent session
+  // 3. Save to local storage and persistent cookie for cross-session/link persistence
   try {
     localStorage.setItem('quickjobs_active_user', JSON.stringify(profile));
     localStorage.setItem(`phone_user_${cleanPhone}`, JSON.stringify({ ...profile, password }));
+    setPersistentUserCookie(profile.uid, cleanPhone);
   } catch {}
 
   return profile;
@@ -333,15 +367,15 @@ export async function loginUser(phoneNumber: string, password: string): Promise<
     youthGroup: userData.youthGroup,
     role: isAdmin ? 'admin' : (userData.role || 'user'),
     isAdmin: isAdmin,
-    IsAdmin: isAdmin,
     ratingAverage: userData.ratingAverage || 5.0,
     ratingCount: userData.ratingCount || 0,
     createdAt: userData.createdAt || new Date().toISOString(),
   };
 
-  // Save session locally
+  // Save session locally and in cookie
   try {
     localStorage.setItem('quickjobs_active_user', JSON.stringify(profile));
+    setPersistentUserCookie(profile.uid, cleanPhone);
   } catch {}
 
   return profile;
@@ -363,6 +397,7 @@ export async function logoutUser(): Promise<void> {
   try {
     localStorage.removeItem('quickjobs_active_user');
     localStorage.removeItem('quickjobs_fallback_uid');
+    clearPersistentUserCookie();
     await signOut(auth);
   } catch (err) {
     console.error('Logout error:', err);
@@ -391,7 +426,6 @@ export async function fetchUserProfile(uid: string): Promise<UserProfile | null>
         ...docData,
         uid: docId,
         isAdmin,
-        IsAdmin: isAdmin,
         role: isAdmin ? 'admin' : (docData.role || 'user'),
       } as UserProfile;
     }
