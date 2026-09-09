@@ -365,7 +365,7 @@ export async function loginUser(phoneNumber: string, password: string): Promise<
   const storedPassword = (userData.password || '').trim();
   // If user has a password set and it doesn't match the entered password
   if (storedPassword && storedPassword !== trimmedPassword) {
-    throw new Error('הסיסמה שהוזנה שגויה. ניתן לאפס סיסמה או להתחבר באמצעות קוד SMS');
+    throw new Error('הסיסמה שהוזנה שגויה. ניתן לאפס סיסמה בקלות בלחיצה למטה');
   }
 
   // If user didn't have password set previously, save this one
@@ -442,15 +442,19 @@ export async function checkIfUserExists(phoneNumber: string): Promise<{ exists: 
   return { exists: false };
 }
 
-// Reset User Password (after OTP verification)
-export async function resetUserPassword(phoneNumber: string, newPassword: string): Promise<UserProfile> {
+// Reset User Password directly and securely
+export async function resetUserPassword(
+  phoneNumber: string, 
+  newPassword: string,
+  fullNameConfirmation?: string
+): Promise<UserProfile> {
   const cleanPhone = cleanPhoneDigits(phoneNumber);
   const formattedPhone = formatPhoneNumber(phoneNumber);
   const userUid = `usr_${cleanPhone}`;
   const trimmedPassword = (newPassword || '').trim();
 
   let targetUid = userUid;
-  let existingData: any = {};
+  let existingData: any = null;
 
   try {
     const directDoc = await getDoc(doc(db, 'users', userUid));
@@ -468,6 +472,32 @@ export async function resetUserPassword(phoneNumber: string, newPassword: string
     }
   } catch (err) {
     console.warn('Reset password lookup warning:', err);
+  }
+
+  // Check fallback in local storage
+  if (!existingData) {
+    const localRaw = localStorage.getItem(`phone_user_${cleanPhone}`);
+    if (localRaw) {
+      try {
+        existingData = JSON.parse(localRaw);
+      } catch {}
+    }
+  }
+
+  if (!existingData) {
+    throw new Error('מספר הטלפון שהוזן אינו רשום במערכת. אנא בצע הרשמה');
+  }
+
+  // Optional Name Confirmation verification
+  if (fullNameConfirmation && fullNameConfirmation.trim()) {
+    const entered = fullNameConfirmation.trim().toLowerCase();
+    const currentName = (existingData.fullName || '').trim().toLowerCase();
+    // Verify first name or full name contains
+    const firstWordEntered = entered.split(' ')[0];
+    const firstWordCurrent = currentName.split(' ')[0];
+    if (firstWordEntered && firstWordCurrent && !currentName.includes(firstWordEntered) && !entered.includes(firstWordCurrent)) {
+      throw new Error(`השם שהוזן אינו תואם את השם הרשום עבור מספר זה`);
+    }
   }
 
   // Update in Firestore

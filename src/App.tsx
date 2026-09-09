@@ -374,6 +374,7 @@ export default function App() {
                 });
               }
             }}
+            onLogout={handleLogout}
           />
         )}
       </main>

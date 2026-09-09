@@ -19,7 +19,8 @@ import {
   ArrowRightLeft,
   Users,
   Download,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
 import { Job, UserProfile, DashboardSubTab, FeedbackReview } from '../types';
 import { JobCard } from './JobCard';
@@ -41,6 +42,7 @@ interface DashboardViewProps {
   onOpenWhatsAppBot?: () => void;
   onRefreshUser?: () => void;
   onClaimSuccess?: (job: Job) => void;
+  onLogout?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -57,6 +59,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenWhatsAppBot,
   onRefreshUser,
   onClaimSuccess,
+  onLogout,
 }) => {
   const isAdmin = isUserAdmin(user);
   const isJobSeeker = user.isLookingForJob === true && !isAdmin;
@@ -210,6 +213,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             )}
 
+            {/* Logout button in header area */}
+            {onLogout && (
+              <button
+                id="btn-dashboard-logout"
+                onClick={onLogout}
+                className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs sm:text-sm font-bold transition-colors items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                title="התנתק מהמשתמש"
+              >
+                <LogOut className="w-4 h-4 text-rose-600" />
+                <span>התנתק</span>
+              </button>
+            )}
+
             {/* Only employers and admins can publish new jobs */}
             {canPublish && (
               <button
@@ -223,6 +239,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             )}
           </div>
         </div>
+
+        {/* Mobile Quick Action Bar with Logout (specifically for phone mode) */}
+        {onLogout && (
+          <div className="sm:hidden flex items-center gap-2 mt-4 pt-3.5 border-t border-slate-100">
+            <button
+              id="btn-dashboard-mobile-logout"
+              onClick={onLogout}
+              className="flex-1 py-2.5 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-black transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+            >
+              <LogOut className="w-4 h-4 text-rose-600" />
+              <span>התנתק מהמשתמש</span>
+            </button>
+          </div>
+        )}
 
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-slate-100 text-center">
