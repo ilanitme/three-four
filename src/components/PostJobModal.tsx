@@ -4,16 +4,14 @@ import {
   MapPin, 
   Navigation, 
   Coins, 
-  User, 
-  Phone, 
   Sparkles, 
   AlertCircle, 
-  FileText, 
-  CheckCircle2, 
-  Share2, 
-  Users,
-  Home,
-  Check
+  Home, 
+  Check, 
+  Plus, 
+  Minus,
+  Crosshair,
+  CheckCircle2
 } from 'lucide-react';
 import { UserProfile, Job, JobCoordinates, KibbutzJobCategory } from '../types';
 import { createJob, updateJob } from '../lib/firebase';
@@ -30,9 +28,9 @@ interface PostJobModalProps {
 const QUICK_PAYMENTS = [
   { label: '50 ₪', value: 50 },
   { label: '80 ₪', value: 80 },
-  { label: '120 ₪', value: 120 },
-  { label: '180 ₪', value: 180 },
-  { label: '250 ₪', value: 250 },
+  { label: '100 ₪', value: 100 },
+  { label: '150 ₪', value: 150 },
+  { label: '200 ₪', value: 200 },
   { label: 'גמיש', value: 'גמיש' },
 ];
 
@@ -46,15 +44,21 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<KibbutzJobCategory>('בייביסיטר');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
-  const [location, setLocation] = useState('');
-  const [houseNumber, setHouseNumber] = useState('');
-  const [payment, setPayment] = useState<number | string>(50);
-  const [customPayment, setCustomPayment] = useState('50');
-  const [isCustomPayment, setIsCustomPayment] = useState(false);
-  const [workersNeeded, setWorkersNeeded] = useState<number>(1);
+  
+  // Location states
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
+  const [manualLocation, setManualLocation] = useState<string>('');
+  const [houseNumber, setHouseNumber] = useState<string>('');
   const [coordinates, setCoordinates] = useState<JobCoordinates | null>(null);
   const [locatingGps, setLocatingGps] = useState(false);
+  const [gpsSuccess, setGpsSuccess] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
+
+  // Payment states
+  const [payment, setPayment] = useState<number | string>(50);
+  const [customPaymentInput, setCustomPaymentInput] = useState<string>('50');
+  const [workersNeeded, setWorkersNeeded] = useState<number>(1);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,28 +68,40 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
       setSelectedCategory(cat);
       setTitle(editingJob.title || '');
       setDetails(editingJob.details || '');
-      setLocation(editingJob.location || '');
-      setCoordinates(editingJob.coordinates || null);
-      setWorkersNeeded(editingJob.workersNeeded || 1);
-      if (typeof editingJob.payment === 'number') {
-        setPayment(editingJob.payment);
-        setCustomPayment(String(editingJob.payment));
+      
+      // Parse existing location
+      const existingLoc = editingJob.location || '';
+      const matchedNeighborhood = KIBBUTZ_LOCATIONS.find(loc => existingLoc.includes(loc));
+      if (matchedNeighborhood) {
+        setSelectedNeighborhood(matchedNeighborhood);
+        const rem = existingLoc.replace(matchedNeighborhood, '').replace(/^[,\s-]+/, '').trim();
+        setManualLocation(rem);
       } else {
-        setPayment(editingJob.payment || 'גמיש');
-        setCustomPayment(String(editingJob.payment));
+        setSelectedNeighborhood('');
+        setManualLocation(existingLoc);
       }
+      
+      setCoordinates(editingJob.coordinates || null);
+      if (editingJob.coordinates) {
+        setGpsSuccess(true);
+      }
+      setWorkersNeeded(editingJob.workersNeeded || 1);
+      
+      const p = editingJob.payment;
+      setPayment(p);
+      setCustomPaymentInput(typeof p === 'number' ? String(p) : (p || '50'));
     } else {
-      // Default to first category
       const firstCat = KIBBUTZ_CATEGORIES[0];
       setSelectedCategory(firstCat.id);
       setTitle(firstCat.label);
       setDetails('');
-      setLocation('שכונת הרחבה חדשה');
+      setSelectedNeighborhood('');
+      setManualLocation('');
       setHouseNumber('');
       setCoordinates(null);
+      setGpsSuccess(false);
       setPayment(firstCat.defaultPay);
-      setCustomPayment(String(firstCat.defaultPay));
-      setIsCustomPayment(false);
+      setCustomPaymentInput(String(firstCat.defaultPay));
       setWorkersNeeded(1);
       setGpsError(null);
       setError(null);
@@ -103,31 +119,13 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
         setTitle(cat.label);
       }
       setPayment(cat.defaultPay);
-      setCustomPayment(String(cat.defaultPay));
-    }
-  };
-
-  const handleSelectKibbutzLocation = (locName: string) => {
-    if (houseNumber.trim()) {
-      setLocation(`${locName}, בית ${houseNumber.trim()}`);
-    } else {
-      setLocation(locName);
-    }
-  };
-
-  const handleHouseNumberChange = (num: string) => {
-    setHouseNumber(num);
-    const baseLoc = location.split(', בית')[0] || location;
-    if (num.trim()) {
-      setLocation(`${baseLoc}, בית ${num.trim()}`);
-    } else {
-      setLocation(baseLoc);
+      setCustomPaymentInput(String(cat.defaultPay));
     }
   };
 
   const handleGetGpsLocation = () => {
     if (!navigator.geolocation) {
-      setGpsError('שירות המיקום אינו נתמך במכשיר זה');
+      setGpsError('שירות המיקום (GPS) אינו נתמך במכשיר זה');
       return;
     }
 
@@ -139,6 +137,7 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         setCoordinates({ lat, lng });
+        setGpsSuccess(true);
 
         try {
           const res = await fetch(
@@ -148,8 +147,8 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
             const data = await res.json();
             const road = data.address?.road || '';
             const village = data.address?.village || data.address?.suburb || '';
-            if (!location) {
-              setLocation(road && village ? `${village}, ${road}` : (road || 'מיקום בקיבוץ זוהה'));
+            if (!manualLocation && !selectedNeighborhood) {
+              setManualLocation(road && village ? `${village}, ${road}` : (road || 'מיקום נוכחי בקיבוץ'));
             }
           }
         } catch (e) {
@@ -159,12 +158,48 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
         }
       },
       (err) => {
-        console.warn('Geolocation error:', err);
+        console.warn('GPS error:', err);
+        setGpsError('לא ניתן לקבל מיקום GPS. ודא שהרשאות המיקום מאושרות בדפדפן');
         setLocatingGps(false);
-        setGpsError('לא הצלחנו לזהות את המיקום. אנא בחר שכונה בקיבוץ מהרשימה');
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 12000, enableHighAccuracy: true }
     );
+  };
+
+  const handleClearGps = () => {
+    setCoordinates(null);
+    setGpsSuccess(false);
+    setGpsError(null);
+  };
+
+  // Quick payment selection
+  const handleSelectQuickPayment = (val: number | string) => {
+    setPayment(val);
+    setCustomPaymentInput(String(val));
+  };
+
+  // Custom payment input typing
+  const handleCustomPaymentChange = (val: string) => {
+    setCustomPaymentInput(val);
+    const trimmed = val.trim();
+    if (trimmed === 'גמיש' || trimmed === 'בהתאם' || trimmed === 'לפי שעה') {
+      setPayment(trimmed);
+    } else {
+      const parsed = parseFloat(trimmed);
+      if (!isNaN(parsed) && parsed > 0) {
+        setPayment(parsed);
+      } else {
+        setPayment(trimmed || 50);
+      }
+    }
+  };
+
+  // Adjust payment by step
+  const handleAdjustPayment = (delta: number) => {
+    const currentVal = typeof payment === 'number' ? payment : (parseFloat(customPaymentInput) || 50);
+    const nextVal = Math.max(10, currentVal + delta);
+    setPayment(nextVal);
+    setCustomPaymentInput(String(nextVal));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -172,18 +207,40 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
     setError(null);
 
     if (!title.trim()) {
-      setError('אנא כתוב מה צריך לעשות (כותרת העבודה)');
+      setError('אנא הזן כותרת לעבודה');
       return;
     }
 
-    if (!location.trim()) {
-      setError('אנא בחר מיקום / שכונה בקיבוץ');
-      return;
+    // Build final location string (optional)
+    let finalLocation = '';
+    const parts = [];
+    if (selectedNeighborhood.trim()) parts.push(selectedNeighborhood.trim());
+    if (houseNumber.trim()) parts.push(`בית ${houseNumber.trim()}`);
+    if (manualLocation.trim()) parts.push(manualLocation.trim());
+
+    if (parts.length > 0) {
+      finalLocation = parts.join(', ');
+    } else if (coordinates) {
+      finalLocation = 'מיקום GPS מדויק בקיבוץ';
+    } else {
+      finalLocation = 'ברחבי הקיבוץ';
     }
 
-    const finalPayment = isCustomPayment 
-      ? (isNaN(Number(customPayment)) ? customPayment : Number(customPayment))
-      : payment;
+    // Determine final payment
+    let finalPayment: number | string = payment;
+    const trimmedInput = customPaymentInput.trim();
+    if (trimmedInput === 'גמיש' || trimmedInput === 'התנדבות' || trimmedInput === 'לפי שעה') {
+      finalPayment = trimmedInput;
+    } else {
+      const parsed = parseFloat(trimmedInput);
+      if (!isNaN(parsed) && parsed > 0) {
+        finalPayment = parsed;
+      } else if (trimmedInput) {
+        finalPayment = trimmedInput;
+      } else {
+        finalPayment = 50;
+      }
+    }
 
     setLoading(true);
 
@@ -193,46 +250,27 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
           title: title.trim(),
           category: selectedCategory,
           details: details.trim(),
-          location: location.trim(),
-          coordinates,
+          location: finalLocation,
           payment: finalPayment,
           workersNeeded: Math.max(1, workersNeeded),
+          ...(coordinates ? { coordinates } : {}),
         });
-        const updatedJobObj: Job = {
-          ...editingJob,
-          title: title.trim(),
-          category: selectedCategory,
-          details: details.trim(),
-          location: location.trim(),
-          coordinates,
-          payment: finalPayment,
-          workersNeeded: Math.max(1, workersNeeded),
-        };
-        onJobSaved(editingJob.id, false, updatedJobObj);
+        onJobSaved(editingJob.id, false);
       } else {
-        const newJobPayload = {
+        const newJobId = await createJob({
           title: title.trim(),
           category: selectedCategory,
           details: details.trim(),
-          location: location.trim(),
-          coordinates,
+          location: finalLocation,
           payment: finalPayment,
-          workersNeeded: Math.max(1, workersNeeded),
           creatorId: user.uid,
           creatorName: user.fullName,
           creatorPhone: user.phoneNumber,
-        };
-        const newJobId = await createJob(newJobPayload);
-        const createdJobObj: Job = {
-          id: newJobId,
-          ...newJobPayload,
-          registeredWorkers: [],
-          registeredWorkerIds: [],
-          status: 'new',
-          createdAt: { seconds: Math.floor(Date.now() / 1000) } as any,
-          updatedAt: { seconds: Math.floor(Date.now() / 1000) } as any,
-        } as Job;
-        onJobSaved(newJobId, true, createdJobObj);
+          creatorRating: user.ratingAverage,
+          workersNeeded: Math.max(1, workersNeeded),
+          ...(coordinates ? { coordinates } : {}),
+        });
+        onJobSaved(newJobId, true);
       }
       onClose();
     } catch (err: any) {
@@ -245,13 +283,13 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div 
-        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto max-h-[92vh] sm:max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200 text-right font-['Assistant',sans-serif]"
+        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-200 text-right font-['Assistant',sans-serif]"
         dir="rtl"
       >
         {/* Close Button */}
@@ -259,31 +297,30 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
           id="btn-close-post-job-modal"
           onClick={onClose}
           aria-label="סגור חלון"
-          className="absolute top-3 sm:top-4 left-3 sm:left-4 p-2 text-white/90 hover:text-white bg-black/20 hover:bg-black/30 rounded-full transition-colors z-20 backdrop-blur-xs"
+          className="absolute top-4 left-4 p-2 text-white bg-black/25 hover:bg-black/40 rounded-full transition-colors z-20 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Top Header - Fixed at top of modal */}
-        <div className="bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-600 p-4 sm:p-6 text-white relative shrink-0">
-          <div className="flex items-center gap-3 relative z-10 pl-10">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-2xs shrink-0">
+        {/* Header */}
+        <div className="bg-emerald-800 p-5 sm:p-6 text-white relative shrink-0">
+          <div className="flex items-center gap-3.5 pl-10">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl font-bold shrink-0">
               🏡
             </div>
             <div>
-              <h2 className="text-lg sm:text-2xl font-black font-['Rubik',sans-serif] drop-shadow-xs leading-tight">
-                {editingJob ? 'עריכת מודעת עבודה בקיבוץ' : 'פרסום בקשת עבודה בקיבוץ ✨'}
+              <h2 className="text-xl sm:text-2xl font-black font-['Rubik',sans-serif] leading-tight">
+                {editingJob ? 'עריכת מודעת עבודה בקיבוץ' : 'פרסום עבודה חדשה בקיבוץ 🌾'}
               </h2>
-              <p className="text-cyan-100 text-xs sm:text-sm mt-0.5 font-medium">
-                בחר סוג עבודה ושכונה, וקבל מענה מהיר מהנעורים!
+              <p className="text-emerald-100 text-xs sm:text-sm mt-0.5">
+                בחר סוג עבודה, מיקום בקיבוץ וסכום תשלום
               </p>
             </div>
           </div>
-          <div className="absolute -left-6 -bottom-6 w-28 h-28 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
         </div>
 
-        {/* Form - Scrollable container */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto overscroll-contain flex-1">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 overflow-y-auto overscroll-contain flex-1">
           {error && (
             <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -291,13 +328,11 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
             </div>
           )}
 
-          {/* 1. Category Selection Grid (10 Kibbutz options) */}
+          {/* 1. Category Selection */}
           <div>
-            <label className="block text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
-              <span>בחר סוג עבודה מבוקשת:</span>
-              <span className="text-[11px] text-teal-700 font-semibold">10 אפשרויות עבודה בקיבוץ</span>
+            <label className="block text-sm font-extrabold text-slate-900 mb-2">
+              1. סוג העבודה:
             </label>
-
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {KIBBUTZ_CATEGORIES.map((cat) => {
                 const isSelected = selectedCategory === cat.id;
@@ -306,23 +341,20 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
                     key={cat.id}
                     type="button"
                     onClick={() => handleSelectCategory(cat)}
-                    className={`p-2.5 rounded-2xl border text-right transition-all flex items-center gap-2.5 ${
+                    className={`p-3 rounded-2xl border text-right transition-all flex items-center gap-2.5 cursor-pointer ${
                       isSelected
-                        ? 'bg-teal-50/90 border-teal-600 text-teal-950 ring-2 ring-teal-500/20 shadow-xs'
-                        : 'bg-slate-50/70 border-slate-200/90 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                        ? 'bg-emerald-50 border-emerald-600 text-emerald-950 ring-2 ring-emerald-500/20 shadow-2xs font-extrabold'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <span className="text-xl shrink-0">{cat.emoji}</span>
+                    <span className="text-2xl shrink-0">{cat.emoji}</span>
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-bold block truncate leading-tight">
+                      <span className="text-xs sm:text-sm block truncate leading-tight">
                         {cat.label}
-                      </span>
-                      <span className="text-[10px] text-slate-400 block truncate">
-                        {cat.defaultPay} ₪ מומלץ
                       </span>
                     </div>
                     {isSelected && (
-                      <Check className="w-4 h-4 text-teal-700 shrink-0 mr-auto" />
+                      <Check className="w-4 h-4 text-emerald-700 shrink-0 mr-auto" />
                     )}
                   </button>
                 );
@@ -330,266 +362,259 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Job Title */}
+          {/* 2. Title & Details */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              כותרת העבודה *
+            <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
+              2. כותרת ותיאור העבודה: *
             </label>
             <input
               id="input-job-title"
               type="text"
               required
-              placeholder="לדוגמה: בייביסיטר לשני ילדים / טיול יומי עם הכלב"
+              placeholder="לדוגמה: בייביסיטר לשני ילדים / גיזום ועשבים בגינה"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all font-medium"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-all font-medium mb-2.5"
             />
-          </div>
-
-          {/* 3. Detailed description */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              פירוט והסבר (שעות מבוקשות, גילאי הילדים, ציוד נדרש...)
-            </label>
             <textarea
               id="input-job-details"
               rows={2}
-              placeholder="פרט מה בדיוק נדרש, שעות מועדפות, האם צריך להביא ציוד מיוחד..."
+              placeholder="פרטים נוספים (לא חובה): שעות מבוקשות, ציוד נדרש..."
               value={details}
               onChange={(e) => setDetails(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all font-medium resize-none"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-all font-medium resize-none"
             />
           </div>
 
-          {/* 4. Kibbutz Location & Neighborhood Selection */}
-          <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
+          {/* 3. Location in Kibbutz (List Selection + Highlighting GPS + Optional Manual) */}
+          <div className="p-4 sm:p-5 bg-slate-50 rounded-3xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Home className="w-4 h-4 text-teal-700" />
-                <span>שכונה / אזור בקיבוץ: *</span>
+              <label className="block text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <Home className="w-4 h-4 text-emerald-700" />
+                <span>3. מיקום בקיבוץ (לא חובה)</span>
               </label>
-              <button
-                type="button"
-                onClick={handleGetGpsLocation}
-                disabled={locatingGps}
-                className="flex items-center gap-1 text-[11px] text-teal-700 hover:text-teal-900 font-bold transition-colors disabled:opacity-50"
-              >
-                <Navigation className={`w-3 h-3 ${locatingGps ? 'animate-spin' : ''}`} />
-                <span>{locatingGps ? 'מזהה GPS...' : 'זהה GPS'}</span>
-              </button>
-            </div>
-
-            {/* Quick Kibbutz Neighborhood Pills */}
-            <div className="flex flex-wrap gap-1.5">
-              {KIBBUTZ_LOCATIONS.map((locName) => {
-                const isSelected = location.startsWith(locName);
-                return (
-                  <button
-                    key={locName}
-                    type="button"
-                    onClick={() => handleSelectKibbutzLocation(locName)}
-                    className={`px-2.5 py-1 text-xs rounded-xl font-medium transition-all ${
-                      isSelected
-                        ? 'bg-teal-700 text-white font-bold shadow-xs'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    {locName}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Location input + House Number Input */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-              <div className="sm:col-span-2 relative">
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                  <MapPin className="w-3.5 h-3.5" />
-                </div>
-                <input
-                  id="input-job-location"
-                  type="text"
-                  required
-                  placeholder="לדוגמה: שכונת הרחבה חדשה, בית 112"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full pr-8 pl-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
-                />
-              </div>
-
-              <div>
-                <input
-                  type="text"
-                  placeholder="מספר בית / דירה"
-                  value={houseNumber}
-                  onChange={(e) => handleHouseNumberChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium text-center"
-                />
-              </div>
-            </div>
-
-            {coordinates && (
-              <div className="flex items-center gap-1.5 text-[11px] text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
-                <CheckCircle2 className="w-3.5 h-3.5 text-teal-700" />
-                <span>מיקום מדויק בקיבוץ הוצמד בהצלחה</span>
-              </div>
-            )}
-
-            {gpsError && (
-              <p className="text-[11px] text-amber-600">
-                {gpsError}
-              </p>
-            )}
-          </div>
-
-          {/* 5. Number of workers needed */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                כמה עובדים נדרשים לביצוע? *
-              </label>
-              <span className="text-[11px] text-teal-700 font-bold flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" />
-                <span>{workersNeeded === 1 ? '1 עובד' : `${workersNeeded} עובדים`}</span>
+              <span className="text-xs text-slate-500 font-medium">
+                רשימה / GPS / ידני
               </span>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 mb-2">
-              {[1, 2, 3, 4].map((num) => {
-                const isSelected = workersNeeded === num;
-                return (
+            {/* 🔥 HIGH EMPHASIS: GPS Location Button */}
+            <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-600/40 rounded-2xl shadow-2xs">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Crosshair className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs sm:text-sm font-black text-emerald-950 flex items-center gap-1.5">
+                      <span>מיקום GPS מדויק</span>
+                      {gpsSuccess && (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-800" />
+                          <span>זוהה בהצלחה!</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-emerald-800 leading-tight mt-0.5">
+                      מאפשר ניווט Waze / מפות ישירות למיקום העבודה
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
-                    key={num}
+                    id="btn-add-gps-location"
                     type="button"
-                    id={`btn-workers-needed-${num}`}
-                    onClick={() => setWorkersNeeded(num)}
-                    className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    onClick={handleGetGpsLocation}
+                    disabled={locatingGps}
+                    className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs ${
+                      gpsSuccess
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-[1.02] active:scale-[0.98]'
                     }`}
                   >
-                    <Users className="w-3.5 h-3.5" />
-                    <span>{num === 1 ? '1 עובד' : `${num} עובדים`}</span>
+                    <Navigation className={`w-3.5 h-3.5 ${locatingGps ? 'animate-spin' : ''}`} />
+                    <span>{locatingGps ? 'מאתר GPS...' : gpsSuccess ? 'עדכן מיקום GPS' : '📍 הוסף מיקום GPS בלחיצה'}</span>
                   </button>
-                );
-              })}
+
+                  {gpsSuccess && (
+                    <button
+                      type="button"
+                      onClick={handleClearGps}
+                      className="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                      title="הסר מיקום GPS"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {gpsError && (
+                <p className="text-xs text-red-600 mt-2 font-medium">
+                  ⚠️ {gpsError}
+                </p>
+              )}
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-              <div className="text-right">
-                <span className="text-xs font-bold text-slate-800 block">
-                  מספר עובדים מותאם:
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  כל עובד יוכל להירשם עד שכל המקומות יתמלאו
-                </span>
-              </div>
-              <div className="flex items-center gap-2" dir="ltr">
-                <button
-                  type="button"
-                  id="btn-decrement-workers"
-                  onClick={() => setWorkersNeeded(Math.max(1, workersNeeded - 1))}
-                  className="w-8 h-8 rounded-xl bg-white border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 flex items-center justify-center text-base"
+            {/* List Selection: Dropdown / Select List */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                בחר שכונה / אזור מהרשימה:
+              </label>
+              <div className="relative">
+                <select
+                  id="select-kibbutz-neighborhood"
+                  value={selectedNeighborhood}
+                  onChange={(e) => setSelectedNeighborhood(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 cursor-pointer"
                 >
-                  -
-                </button>
-                <span className="w-8 text-center font-bold text-sm text-slate-900">
-                  {workersNeeded}
-                </span>
-                <button
-                  type="button"
-                  id="btn-increment-workers"
-                  onClick={() => setWorkersNeeded(Math.min(20, workersNeeded + 1))}
-                  className="w-8 h-8 rounded-xl bg-white border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 flex items-center justify-center text-base"
-                >
-                  +
-                </button>
+                  <option value="">-- בחר שכונה או אזור בקיבוץ (לא חובה) --</option>
+                  {KIBBUTZ_LOCATIONS.map((loc) => (
+                    <option key={loc} value={loc}>
+                      📍 {loc}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+
+            {/* Optional Manual Entry & House Number */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-600">
+                  עריכה ידנית או מספר בית (לא חובה):
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="sm:col-span-2 relative">
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <input
+                    id="input-job-manual-location"
+                    type="text"
+                    placeholder="פירוט חופשי (למשל: ליד המועדון, גינה אחורית)"
+                    value={manualLocation}
+                    onChange={(e) => setManualLocation(e.target.value)}
+                    className="w-full pr-9 pl-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    id="input-job-house-number"
+                    type="text"
+                    placeholder="מספר בית"
+                    value={houseNumber}
+                    onChange={(e) => setHouseNumber(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium text-center"
+                  />
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* 6. Payment Amount */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              כמה מוכנים לשלם לעובד? (תשלום ב-₪) *
-            </label>
+          {/* 4. Payment & Workers Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
-            <div className="grid grid-cols-6 gap-1.5 mb-2">
-              {QUICK_PAYMENTS.map((p) => {
-                const isSelected = !isCustomPayment && payment === p.value;
-                return (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => {
-                      setIsCustomPayment(false);
-                      setPayment(p.value);
-                    }}
-                    className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all border ${
-                      isSelected
-                        ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
+            {/* Number of workers */}
+            <div>
+              <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
+                כמה עובדים דרושים?
+              </label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[1, 2, 3, 4].map((num) => {
+                  const isSelected = workersNeeded === num;
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setWorkersNeeded(num)}
+                      className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {num} {num === 1 ? 'עובד' : 'עובדים'}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                type="button"
-                onClick={() => setIsCustomPayment(true)}
-                className={`text-xs px-3.5 py-2 rounded-xl font-bold border transition-colors ${
-                  isCustomPayment
-                    ? 'bg-teal-50 text-teal-800 border-teal-300'
-                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                }`}
-              >
-                סכום מותאם:
-              </button>
-
-              <div className="relative flex-1">
-                <input
-                  id="input-job-custom-payment"
-                  type="text"
-                  placeholder="הזן סכום (לדוגמה: 75)"
-                  value={customPayment}
-                  onFocus={() => setIsCustomPayment(true)}
-                  onChange={(e) => {
-                    setIsCustomPayment(true);
-                    setCustomPayment(e.target.value);
-                  }}
-                  className={`w-full px-3.5 py-2 bg-slate-50 border rounded-xl text-sm font-bold transition-all ${
-                    isCustomPayment
-                      ? 'border-teal-500 ring-2 ring-teal-500/20 bg-white'
-                      : 'border-slate-200'
-                  }`}
-                />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  ₪
+            {/* Editable Payment Box with Custom Entry */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-extrabold text-slate-900 flex items-center gap-1">
+                  <Coins className="w-4 h-4 text-amber-600" />
+                  <span>עריכת תשלום:</span>
+                </label>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  ניתן להקליד כל סכום
                 </span>
               </div>
-            </div>
-          </div>
 
-          {/* 7. Contact Details */}
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <span className="text-xs font-bold text-slate-700 block">
-              פרטי קשר שישותפו עם מי שיירשם לעבודה בקיבוץ:
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200">
-                <User className="w-4 h-4 text-teal-700 shrink-0" />
-                <span className="font-bold text-slate-800 truncate">{user.fullName}</span>
+              {/* Direct Custom Amount Input + Quick Steppers */}
+              <div className="flex items-center gap-1.5 mb-2">
+                <div className="relative flex-1">
+                  <input
+                    id="input-custom-payment"
+                    type="text"
+                    required
+                    placeholder="סכום (למשל: 60)"
+                    value={customPaymentInput}
+                    onChange={(e) => handleCustomPaymentChange(e.target.value)}
+                    className="w-full pr-3 pl-8 py-2 bg-emerald-50/50 border-2 border-emerald-600/40 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white text-right"
+                  />
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 text-xs font-bold text-emerald-800 pointer-events-none">
+                    ₪
+                  </span>
+                </div>
+
+                {/* +10 / -10 Quick Adjusters */}
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPayment(-10)}
+                  className="w-8 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-700 font-bold transition-colors cursor-pointer"
+                  title="הורד 10 ₪"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPayment(10)}
+                  className="w-8 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-700 font-bold transition-colors cursor-pointer"
+                  title="הוסף 10 ₪"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-slate-200">
-                <Phone className="w-4 h-4 text-teal-700 shrink-0" />
-                <span className="font-bold text-slate-800 font-mono">{user.phoneNumber}</span>
+
+              {/* Quick Select Presets */}
+              <div className="grid grid-cols-6 gap-1">
+                {QUICK_PAYMENTS.map((p) => {
+                  const isSelected = String(payment) === String(p.value) || customPaymentInput === String(p.value);
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => handleSelectQuickPayment(p.value)}
+                      className={`py-1.5 px-0.5 text-center rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
           </div>
 
           {/* Submit Button */}
@@ -598,13 +623,13 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({
               id="btn-submit-job"
               type="submit"
               disabled={loading}
-              className="w-full py-4 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white font-black text-sm sm:text-base shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full py-4 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base sm:text-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             >
               {loading ? (
                 <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               ) : (
                 <>
-                  <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+                  <Sparkles className="w-5 h-5 text-amber-200" />
                   <span>{editingJob ? 'שמור שינויים' : 'פרסם עבודה בקיבוץ עכשיו 🚀'}</span>
                 </>
               )}

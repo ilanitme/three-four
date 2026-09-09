@@ -306,6 +306,7 @@ export async function loginUser(phoneNumber: string, password: string): Promise<
   const cleanPhone = cleanPhoneDigits(phoneNumber);
   const formattedPhone = formatPhoneNumber(phoneNumber);
   const userUid = `usr_${cleanPhone}`;
+  const trimmedPassword = (password || '').trim();
 
   let userData: any = null;
 
@@ -334,7 +335,22 @@ export async function loginUser(phoneNumber: string, password: string): Promise<
     }
   }
 
-  // 3. Fallback to localStorage
+  // 3. Query fallback by cleanPhone field
+  if (!userData) {
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('cleanPhone', '==', cleanPhone));
+      const snap = await withTimeout(getDocs(q), 2000, null as any);
+      if (snap && !snap.empty) {
+        const docSnap = snap.docs[0];
+        userData = { uid: docSnap.id, ...docSnap.data() };
+      }
+    } catch (err) {
+      console.warn('CleanPhone query lookup warning:', err);
+    }
+  }
+
+  // 4. Fallback to localStorage
   if (!userData) {
     const localRaw = localStorage.getItem(`phone_user_${cleanPhone}`) || localStorage.getItem(`phone_auth_${cleanPhone}`);
     if (localRaw) {
@@ -343,11 +359,20 @@ export async function loginUser(phoneNumber: string, password: string): Promise<
   }
 
   if (!userData) {
-    throw new Error('מספר הטלפון אינו קיים במערכת. אנא בצע הרשמה');
+    throw new Error('מספר הטלפון אינו קיים במערכת. אנא בצע הרשמה ראשונית');
   }
 
-  if (userData.password && userData.password !== password) {
-    throw new Error('הסיסמה שהוזנה שגויה');
+  const storedPassword = (userData.password || '').trim();
+  // If user has a password set and it doesn't match the entered password
+  if (storedPassword && storedPassword !== trimmedPassword) {
+    throw new Error('הסיסמה שהוזנה שגויה. ניתן לאפס סיסמה או להתחבר באמצעות קוד SMS');
+  }
+
+  // If user didn't have password set previously, save this one
+  if (!storedPassword && trimmedPassword) {
+    try {
+      await setDoc(doc(db, 'users', userData.uid || userUid), { password: trimmedPassword }, { merge: true });
+    } catch {}
   }
 
   // Ensure Firebase Auth session
@@ -360,8 +385,8 @@ export async function loginUser(phoneNumber: string, password: string): Promise<
 
   const profile: UserProfile = {
     uid: userData.uid || userUid,
-    fullName: userData.fullName,
-    phoneNumber: userData.phoneNumber,
+    fullName: userData.fullName || 'תושב הקיבוץ',
+    phoneNumber: userData.phoneNumber || formattedPhone,
     isPhoneVerified: true,
     isLookingForJob: userData.isLookingForJob ?? false,
     youthGroup: userData.youthGroup,
@@ -373,6 +398,172 @@ export async function loginUser(phoneNumber: string, password: string): Promise<
   };
 
   // Save session locally and in cookie
+  try {
+    localStorage.setItem('quickjobs_active_user', JSON.stringify(profile));
+    localStorage.setItem(`phone_user_${cleanPhone}`, JSON.stringify({ ...profile, password: trimmedPassword }));
+    setPersistentUserCookie(profile.uid, cleanPhone);
+  } catch {}
+
+  return profile;
+}
+
+// Check if user exists by phone
+export async function checkIfUserExists(phoneNumber: string): Promise<{ exists: boolean; fullName?: string; uid?: string }> {
+  const cleanPhone = cleanPhoneDigits(phoneNumber);
+  const formattedPhone = formatPhoneNumber(phoneNumber);
+  const userUid = `usr_${cleanPhone}`;
+
+  try {
+    const directDoc = await withTimeout(getDoc(doc(db, 'users', userUid)), 2000, null as any);
+    if (directDoc && directDoc.exists()) {
+      const data = directDoc.data();
+      return { exists: true, fullName: data.fullName, uid: directDoc.id };
+    }
+
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('phoneNumber', '==', formattedPhone));
+    const snap = await withTimeout(getDocs(q), 2000, null as any);
+    if (snap && !snap.empty) {
+      const data = snap.docs[0].data();
+      return { exists: true, fullName: data.fullName, uid: snap.docs[0].id };
+    }
+  } catch (err) {
+    console.warn('Check user exists error:', err);
+  }
+
+  const localRaw = localStorage.getItem(`phone_user_${cleanPhone}`);
+  if (localRaw) {
+    try {
+      const parsed = JSON.parse(localRaw);
+      return { exists: true, fullName: parsed.fullName, uid: parsed.uid };
+    } catch {}
+  }
+
+  return { exists: false };
+}
+
+// Reset User Password (after OTP verification)
+export async function resetUserPassword(phoneNumber: string, newPassword: string): Promise<UserProfile> {
+  const cleanPhone = cleanPhoneDigits(phoneNumber);
+  const formattedPhone = formatPhoneNumber(phoneNumber);
+  const userUid = `usr_${cleanPhone}`;
+  const trimmedPassword = (newPassword || '').trim();
+
+  let targetUid = userUid;
+  let existingData: any = {};
+
+  try {
+    const directDoc = await getDoc(doc(db, 'users', userUid));
+    if (directDoc.exists()) {
+      existingData = directDoc.data();
+      targetUid = directDoc.id;
+    } else {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phoneNumber', '==', formattedPhone));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        existingData = snap.docs[0].data();
+        targetUid = snap.docs[0].id;
+      }
+    }
+  } catch (err) {
+    console.warn('Reset password lookup warning:', err);
+  }
+
+  // Update in Firestore
+  try {
+    await setDoc(doc(db, 'users', targetUid), {
+      password: trimmedPassword,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('Firestore password update error:', err);
+  }
+
+  // Update in Firebase Auth if possible
+  await ensureAuthUser();
+
+  const isAdmin = isUserAdmin(existingData);
+
+  const profile: UserProfile = {
+    uid: targetUid,
+    fullName: existingData.fullName || 'תושב הקיבוץ',
+    phoneNumber: existingData.phoneNumber || formattedPhone,
+    isPhoneVerified: true,
+    isLookingForJob: existingData.isLookingForJob ?? false,
+    youthGroup: existingData.youthGroup,
+    role: isAdmin ? 'admin' : (existingData.role || 'user'),
+    isAdmin: isAdmin,
+    ratingAverage: existingData.ratingAverage || 5.0,
+    ratingCount: existingData.ratingCount || 0,
+    createdAt: existingData.createdAt || new Date().toISOString(),
+  };
+
+  try {
+    localStorage.setItem('quickjobs_active_user', JSON.stringify(profile));
+    localStorage.setItem(`phone_user_${cleanPhone}`, JSON.stringify({ ...profile, password: trimmedPassword }));
+    setPersistentUserCookie(profile.uid, cleanPhone);
+  } catch {}
+
+  return profile;
+}
+
+// Login directly with Phone Number verified by SMS OTP (Passwordless login)
+export async function loginUserWithOtp(phoneNumber: string): Promise<UserProfile> {
+  const cleanPhone = cleanPhoneDigits(phoneNumber);
+  const formattedPhone = formatPhoneNumber(phoneNumber);
+  const userUid = `usr_${cleanPhone}`;
+
+  let userData: any = null;
+
+  try {
+    const directDoc = await withTimeout(getDoc(doc(db, 'users', userUid)), 2000, null as any);
+    if (directDoc && directDoc.exists()) {
+      userData = { uid: directDoc.id, ...directDoc.data() };
+    }
+  } catch (err) {
+    console.warn('Direct user lookup warning:', err);
+  }
+
+  if (!userData) {
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phoneNumber', '==', formattedPhone));
+      const snap = await withTimeout(getDocs(q), 2000, null as any);
+      if (snap && !snap.empty) {
+        const docSnap = snap.docs[0];
+        userData = { uid: docSnap.id, ...docSnap.data() };
+      }
+    } catch (err) {
+      console.warn('Query user lookup warning:', err);
+    }
+  }
+
+  if (!userData) {
+    const localRaw = localStorage.getItem(`phone_user_${cleanPhone}`) || localStorage.getItem(`phone_auth_${cleanPhone}`);
+    if (localRaw) {
+      userData = JSON.parse(localRaw);
+    }
+  }
+
+  await ensureAuthUser();
+
+  const isAdmin = isUserAdmin(userData);
+
+  const profile: UserProfile = {
+    uid: userData?.uid || userUid,
+    fullName: userData?.fullName || 'תושב הקיבוץ',
+    phoneNumber: userData?.phoneNumber || formattedPhone,
+    isPhoneVerified: true,
+    isLookingForJob: userData?.isLookingForJob ?? false,
+    youthGroup: userData?.youthGroup,
+    role: isAdmin ? 'admin' : (userData?.role || 'user'),
+    isAdmin: isAdmin,
+    ratingAverage: userData?.ratingAverage || 5.0,
+    ratingCount: userData?.ratingCount || 0,
+    createdAt: userData?.createdAt || new Date().toISOString(),
+  };
+
   try {
     localStorage.setItem('quickjobs_active_user', JSON.stringify(profile));
     setPersistentUserCookie(profile.uid, cleanPhone);

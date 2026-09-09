@@ -15,6 +15,7 @@ import {
 } from './lib/firebase';
 import { Job, UserProfile, AppTab } from './types';
 import { Header } from './components/Header';
+import { BottomNav } from './components/BottomNav';
 import { AvailableJobsFeed } from './components/AvailableJobsFeed';
 import { DashboardView } from './components/DashboardView';
 import { AuthModal } from './components/AuthModal';
@@ -338,7 +339,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-12">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-28">
         {currentTab === 'feed' && (
           <AvailableJobsFeed
             jobs={availableJobs}
@@ -377,8 +378,24 @@ export default function App() {
         )}
       </main>
 
+      {/* Permanent Bottom Navigation Bar */}
+      <BottomNav
+        currentTab={currentTab}
+        onSelectTab={(tab) => {
+          if (tab === 'post') {
+            handleOpenPostJob();
+          } else {
+            setCurrentTab(tab);
+          }
+        }}
+        user={currentUser}
+        onOpenAuth={() => handleOpenAuth('register')}
+        availableCount={availableJobs.length}
+        myJobsCount={postedJobs.length + claimedJobs.length}
+      />
+
       {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-6 text-center text-xs text-slate-500 mb-16 md:mb-0">
+      <footer className="border-t border-slate-200/80 bg-white py-6 text-center text-xs text-slate-500 mb-20">
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-800">שלוש - ארבע • לוח עבודות בקיבוץ</span>
