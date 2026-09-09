@@ -23,6 +23,7 @@ import { ThreeFourLogo } from './ThreeFourLogo';
 import { KIBBUTZ_CATEGORIES, KIBBUTZ_LOCATIONS, getCategoryMeta } from '../constants/kibbutz';
 import { isUserAdmin, updateUserProfile } from '../lib/firebase';
 import { PWAInstallButton } from './PWAInstallButton';
+import { usePWAInstall, checkIsStandaloneApp } from '../hooks/usePWAInstall';
 
 interface AvailableJobsFeedProps {
   jobs: Job[];
@@ -51,6 +52,22 @@ export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
   const [priceFilter, setPriceFilter] = useState<'all' | 'under100' | '100to200' | 'above200'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'highest_pay'>('newest');
   const [switchingRole, setSwitchingRole] = useState(false);
+  const { isInstalled } = usePWAInstall();
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => checkIsStandaloneApp());
+  const [installBannerDismissed, setInstallBannerDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('three_four_feed_install_dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismissInstallBanner = () => {
+    try {
+      localStorage.setItem('three_four_feed_install_dismissed', 'true');
+    } catch {}
+    setInstallBannerDismissed(true);
+  };
 
   const isAdmin = isUserAdmin(currentUser);
   const isJobSeeker = currentUser?.isLookingForJob === true && !isAdmin;
@@ -511,28 +528,40 @@ export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
 
       </div>
 
-      {/* Mobile PWA Install Box */}
-      <div 
-        id="main-pwa-install-banner"
-        className="bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-600 text-white rounded-3xl p-5 sm:p-6 shadow-md shadow-cyan-800/15 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-right border border-white/20"
-      >
-        <div className="flex flex-col sm:flex-row items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-amber-200 shrink-0 shadow-2xs">
-            <img src="/apple-touch-icon.png" alt="שלוש-ארבע" className="w-9 h-9 rounded-xl object-cover" />
-          </div>
-          <div>
-            <h4 className="text-sm sm:text-base font-black text-white font-['Rubik',sans-serif] flex items-center justify-center sm:justify-start gap-1.5">
-              <span>השתמש ב״שלוש - ארבע״ כאפליקציה בנייד</span>
-              <span className="text-amber-300">📱</span>
-            </h4>
-            <p className="text-xs text-cyan-100 mt-0.5 font-medium">
-              התקנה מהירה לאייפון (iOS Safari) ולאנדרואיד — פתיחה ישירה ממסך הבית ללא צורך בדפדפן
-            </p>
-          </div>
-        </div>
+      {/* Mobile PWA Install Box - Only shown in browser when not installed and not dismissed */}
+      {!isStandalone && !isInstalled && !installBannerDismissed && (
+        <div 
+          id="main-pwa-install-banner"
+          className="relative bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-600 text-white rounded-3xl p-5 sm:p-6 shadow-md shadow-cyan-800/15 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-right border border-white/20"
+        >
+          {/* Dismiss button */}
+          <button
+            onClick={handleDismissInstallBanner}
+            aria-label="סגור הודעה"
+            className="absolute top-3 left-3 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-colors cursor-pointer"
+            title="סגור והסתר הודעה זו"
+          >
+            <X className="w-4 h-4" />
+          </button>
 
-        <PWAInstallButton />
-      </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3.5 pl-6 sm:pl-0">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-amber-200 shrink-0 shadow-2xs">
+              <img src="/apple-touch-icon.png" alt="שלוש-ארבע" className="w-9 h-9 rounded-xl object-cover" />
+            </div>
+            <div>
+              <h4 className="text-sm sm:text-base font-black text-white font-['Rubik',sans-serif] flex items-center justify-center sm:justify-start gap-1.5">
+                <span>השתמש ב״שלוש - ארבע״ כאפליקציה בנייד</span>
+                <span className="text-amber-300">📱</span>
+              </h4>
+              <p className="text-xs text-cyan-100 mt-0.5 font-medium">
+                התקנה מהירה לאייפון (iOS Safari) ולאנדרואיד — פתיחה ישירה ממסך הבית ללא צורך בדפדפן
+              </p>
+            </div>
+          </div>
+
+          <PWAInstallButton />
+        </div>
+      )}
 
       {/* Technical Support Box - Bottom of Main Screen */}
       <div 
