@@ -5,7 +5,8 @@ import {
   X, 
   ArrowRightLeft, 
   PhoneCall, 
-  Phone
+  Phone,
+  FileText
 } from 'lucide-react';
 import { Job, UserProfile } from '../types';
 import { JobCard } from './JobCard';
@@ -22,6 +23,7 @@ interface AvailableJobsFeedProps {
   onOpenDetails: (job: Job) => void;
   onEditJob: (job: Job) => void;
   onClaimSuccess?: (job: Job) => void;
+  onOpenFlyer?: () => void;
 }
 
 export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
@@ -33,6 +35,7 @@ export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
   onOpenDetails,
   onEditJob,
   onClaimSuccess,
+  onOpenFlyer,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [switchingRole, setSwitchingRole] = useState(false);
@@ -157,16 +160,30 @@ export const AvailableJobsFeed: React.FC<AvailableJobsFeedProps> = ({
                 : 'בייביסיטר, גינון, ניקיון, טיול עם כלבים, עזרה בענפים וסיוע לחברים — בקלות ובשמחה.'}
             </p>
 
-            {canPublish && (
-              <button
-                id="btn-feed-post-job-hero"
-                onClick={onOpenPostJob}
-                className="w-full sm:w-auto px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-base font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <PlusCircle className="w-5 h-5 text-slate-950" />
-                <span>פרסם עבודה חדשה בקיבוץ +</span>
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {canPublish && (
+                <button
+                  id="btn-feed-post-job-hero"
+                  onClick={onOpenPostJob}
+                  className="w-full sm:w-auto px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-base font-black rounded-2xl shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <PlusCircle className="w-5 h-5 text-slate-950" />
+                  <span>פרסם עבודה חדשה בקיבוץ +</span>
+                </button>
+              )}
+
+              {onOpenFlyer && (
+                <button
+                  id="btn-feed-open-flyer"
+                  onClick={onOpenFlyer}
+                  className="w-full sm:w-auto px-4 py-3.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 text-sm font-black rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-xs"
+                  title="הצג פלייר הסבר לחברי הקיבוץ"
+                >
+                  <FileText className="w-4 h-4 text-emerald-300" />
+                  <span>פלייר הסברה לחברים 📄</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="hidden lg:flex flex-col items-center justify-center p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 select-none shrink-0 text-center">

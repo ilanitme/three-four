@@ -25,6 +25,7 @@ import { JobDetailsModal } from './components/JobDetailsModal';
 import { ClaimSuccessWhatsAppModal } from './components/ClaimSuccessWhatsAppModal';
 import { CsvExportModal } from './components/CsvExportModal';
 import { WhatsAppBotSettingsModal } from './components/WhatsAppBotSettingsModal';
+import { CommunityFlyerModal } from './components/CommunityFlyerModal';
 import { downloadJobsCsvFile } from './lib/googleSheetsService';
 import { sendGreenApiJobNotification } from './lib/greenApiService';
 import { Sparkles, MessageCircle, Heart, Phone, PhoneCall } from 'lucide-react';
@@ -71,6 +72,7 @@ export default function App() {
   const [claimedJobForWhatsApp, setClaimedJobForWhatsApp] = useState<Job | null>(null);
   const [csvExportModalOpen, setCsvExportModalOpen] = useState(false);
   const [whatsAppBotModalOpen, setWhatsAppBotModalOpen] = useState(false);
+  const [flyerModalOpen, setFlyerModalOpen] = useState(false);
 
   // 1. Listen to Firebase Auth state with cookie & localStorage persistence
   useEffect(() => {
@@ -336,6 +338,7 @@ export default function App() {
         onOpenGoogleSheets={() => setCsvExportModalOpen(true)}
         onOpenGoogleSheetsFile={() => downloadJobsCsvFile(allKnownJobs)}
         onOpenWhatsAppBot={() => setWhatsAppBotModalOpen(true)}
+        onOpenFlyer={() => setFlyerModalOpen(true)}
       />
 
       {/* Main Container */}
@@ -350,6 +353,7 @@ export default function App() {
             onOpenDetails={handleOpenDetails}
             onEditJob={handleEditJob}
             onClaimSuccess={handleClaimSuccess}
+            onOpenFlyer={() => setFlyerModalOpen(true)}
           />
         )}
 
@@ -505,6 +509,12 @@ export default function App() {
           onClose={() => setWhatsAppBotModalOpen(false)}
         />
       )}
+
+      {/* Community Flyer Modal */}
+      <CommunityFlyerModal
+        isOpen={flyerModalOpen}
+        onClose={() => setFlyerModalOpen(false)}
+      />
 
       {/* Offline Status Indicator */}
       <OfflineIndicator />

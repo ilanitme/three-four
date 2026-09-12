@@ -6,7 +6,8 @@ import {
   User as UserIcon, 
   LogOut, 
   FileSpreadsheet,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -19,6 +20,7 @@ interface HeaderProps {
   onOpenGoogleSheets?: () => void;
   onOpenGoogleSheetsFile?: () => void;
   onOpenWhatsAppBot?: () => void;
+  onOpenFlyer?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenGoogleSheets,
   onOpenGoogleSheetsFile,
   onOpenWhatsAppBot,
+  onOpenFlyer,
 }) => {
   const isAdmin = isUserAdmin(user);
 
@@ -72,6 +75,19 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <MessageSquare className="w-4 h-4 text-emerald-600" />
                 <span className="hidden sm:inline">בוט וואטסאפ</span>
+              </button>
+            )}
+
+            {/* Community Flyer button */}
+            {onOpenFlyer && (
+              <button
+                id="nav-btn-flyer"
+                onClick={onOpenFlyer}
+                className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-amber-950 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors shadow-2xs cursor-pointer"
+                title="פלייר והסברים לחברי הקיבוץ"
+              >
+                <FileText className="w-4 h-4 text-amber-700" />
+                <span className="hidden sm:inline">פלייר לקיבוץ</span>
               </button>
             )}
 
