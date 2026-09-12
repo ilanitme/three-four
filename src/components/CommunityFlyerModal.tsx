@@ -27,29 +27,32 @@ export const CommunityFlyerModal: React.FC<CommunityFlyerModalProps> = ({
 
   if (!isOpen) return null;
 
-  const appUrl = window.location.origin;
+  const appUrl = 'https://three-four.vercel.app';
 
   const flyerWhatsAppText = `🌾 *שלוש - ארבע לעבודה בקיבוץ!* 🌾
-_מחברים בין עבודות בקיבוץ לבין הנוער שלנו (שכבות י'–י"ב)_
+_מחברים בין קהילת הקיבוץ לנוער שלנו (שכבות י'–י"ב)_
 
 חברות וחברים יקרים,
-הנוער שלנו בשכבות י'–י"ב מגייס כסף למימון *חג המחזור וטיול סיום י"ב* – ואנחנו צריכים אתכם!
+השקנו את לוח העבודות הקהילתי של הקיבוץ!
+המטרה הראשונה והחשובה מכולן היא **לחבר בין חברי הקיבוץ לנוער**, ולעודד עשייה, שותפות וערבות הדדית.
 
-יש לכם עבודה קטנה או גדולה בבית או בחצר?
-👶 *בייביסיטר*
+בנוסף, הכסף שהנוער מרוויח מיועד למימון **טיול סוף כיתה י"ב** – מתוך מטרה חינוכית וערכית שישיגו את הכסף בעבודה עצמית ולא ייקחו מההורים! 💪🌱
+
+צריכים עזרה קטנה או גדולה בבית או בחצר?
+👶 *בייביסיטר ושמרטפות*
 🐕 *דוגיסיטר וטיול עם כלבים*
-🍽️ *שטיפת כלים וניקיון*
-🌿 *סידור גינה ועישוב*
+🍽️ *שטיפת כלים, סדר וניקיון*
+🌿 *סידור ועישוב גינה*
 📦 *עזרה בהובלות, פריקה וסחיבה*
-...וכל עזרה אחרת שאתם צריכים!
+...וכל משימה אחרת שאתם צריכים בה ידיים חרוצות!
 
-*איך זה עובד? פשוט ומהיר:*
-1. נכנסים לקישור (בלי סיבוכים – הרשמה פשוטה עם שם וטלפון):
+*איך זה עובד? פשוט, מהיר וללא סיבוכים:*
+1️⃣ נכנסים לקישור (הרשמה קצרה עם שם וטלפון בלבד):
 🔗 ${appUrl}
-2. מפרסמים מודעה קצרה עם פרטי העבודה, המועד והתשלום.
-3. הנוער רואה את העבודה ונרשם אליה ישירות – ויוצרים קשר לתיאום!
+2️⃣ מפרסמים מודעה קצרה עם פרטי העבודה, המועד והתשלום המוצע.
+3️⃣ הנוער נרשם לעבודה ישירות באפליקציה – ויוצרים קשר לתיאום!
 
-בואו נפרגן לנוער שלנו, נרוויח עזרה איכותית בבית ונעזור להם להגיע ליעד! 💪✨`;
+בואו נפרגן לנוער שלנו, נרוויח עזרה נהדרת ונעזור להם לעבוד ולהרוויח בכוחות עצמם! ✨🤝`;
 
   const handleCopyText = async () => {
     try {
@@ -114,29 +117,32 @@ _מחברים בין עבודות בקיבוץ לבין הנוער שלנו (ש�
               <ThreeFourLogo size="lg" />
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/80 text-emerald-900 text-xs font-extrabold border border-emerald-200">
-              <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-              <span>גיוס כספים לחג המחזור וטיול סיום י״ב</span>
+              <Heart className="w-3.5 h-3.5 text-emerald-700 fill-emerald-700" />
+              <span>חיבור בין הקהילה לנוער &bull; עבודה עצמית לטיול סוף י״ב</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               צריכים עזרה בבית או בחצר? <br className="hidden sm:inline" />
               <span className="text-emerald-700">הנוער של הקיבוץ כאן בשבילכם!</span>
             </h1>
             <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-              השקנו את אפליקציית לוח העבודות הקהילתי של הקיבוץ, המחברת ישירות בין חברים שצריכים עזרה לבין בני הנוער שלנו (שכבות י'–י"ב).
+              השקנו את אפליקציית לוח העבודות הקהילתי של הקיבוץ – לחבר בין חברים שצריכים עזרה לבין בני הנוער שלנו (שכבות י'–י"ב).
             </p>
           </div>
 
-          {/* Goal Highlight */}
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs font-bold text-lg">
-              🎯
+          {/* Goals & Values Highlight */}
+          <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs font-bold text-lg">
+              🤝
             </div>
-            <div>
-              <h3 className="text-sm font-black text-amber-950 mb-0.5">
-                המטרה: איסוף כספים משותף של הנוער
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-emerald-950">
+                קודם כל: חיבור קהילתי ועבודה משותפת
               </h3>
-              <p className="text-xs text-amber-900 leading-relaxed">
-                כל עבודה שאתם מפרסמים עוזרת לנוער לממן את <strong>חג המחזור</strong> ואת <strong>מסע סיום י״ב</strong> בעבודה עצמית וערכית!
+              <p className="text-xs text-emerald-900 leading-relaxed">
+                האפליקציה נועדה לחזק את הקשר בין חברי הקיבוץ לנוער דרך עזרה הדדית.
+              </p>
+              <p className="text-xs text-emerald-850 font-semibold leading-relaxed pt-0.5">
+                🎯 <strong>המטרה:</strong> מימון <strong>טיול סוף כיתה י״ב</strong> – מתוך ערך חינוכי וחשוב שהנוער ישיג את הכסף <strong>בעבודה עצמית</strong> ולא ייקח מההורים!
               </p>
             </div>
           </div>
@@ -201,7 +207,7 @@ _מחברים בין עבודות בקיבוץ לבין הנוער שלנו (ש�
                   3
                 </span>
                 <span className="text-slate-800">
-                  <strong>עובדים נרשמים:</strong> הנוער רואה את העבודה ונרשם אליה ישירות – יוצרים קשר בוואטסאפ או בטלפון וסוגרים!
+                  <strong>הנוער נרשם:</strong> הנוער רואה את העבודה ונרשם אליה ישירות – יוצרים קשר וסוגרים בקלות!
                 </span>
               </div>
             </div>
@@ -212,9 +218,14 @@ _מחברים בין עבודות בקיבוץ לבין הנוער שלנו (ש�
             <span className="text-xs text-slate-600 block mb-1">
               כתובת האפליקציה בקיבוץ:
             </span>
-            <span className="text-xs sm:text-sm font-black text-emerald-800 font-mono select-all">
+            <a 
+              href={appUrl} 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-xs sm:text-sm font-black text-emerald-800 font-mono underline hover:text-emerald-950"
+            >
               {appUrl}
-            </span>
+            </a>
           </div>
         </div>
 
